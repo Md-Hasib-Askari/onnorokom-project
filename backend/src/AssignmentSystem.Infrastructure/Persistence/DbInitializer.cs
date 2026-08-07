@@ -26,9 +26,7 @@ public class DbInitializer(AppDbContext dbContext, IPasswordHasher passwordHashe
             PasswordHash = passwordHasher.Hash(AdminPassword),
             Role = UserRole.Admin,
             Status = AccountStatus.Approved,
-            IsActive = true,
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
+            IsActive = true
         };
 
         dbContext.AuthUsers.Add(admin);

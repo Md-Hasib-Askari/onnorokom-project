@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Domain.Common;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Infrastructure.Persistence.Configurations;
@@ -8,7 +9,12 @@ namespace AssignmentSystem.Infrastructure.Persistence;
 
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    private readonly ICurrentUser _currentUser;
+
+    public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser currentUser) : base(options)
+    {
+        _currentUser = currentUser;
+    }
 
     public DbSet<AuthUser> AuthUsers => Set<AuthUser>();
     public DbSet<TeacherProfile> TeacherProfiles => Set<TeacherProfile>();
@@ -44,5 +50,67 @@ public class AppDbContext : DbContext
                 modelBuilder.Entity(entityType.ClrType).HasQueryFilter(filter);
             }
         }
+    }
+
+    public override int SaveChanges()
+    {
+        ApplyAuditFields();
+        return base.SaveChanges();
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        ApplyAuditFields();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void ApplyAuditFields()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var userId = _currentUser.UserId;
+
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            Action apply = entry switch
+            {
+                { State: EntityState.Added, Entity: ICreatable creatable } => () =>
+                {
+                    creatable.CreatedAt = now;
+                    if (string.IsNullOrWhiteSpace(creatable.CreatedBy))
+                    {
+                        creatable.CreatedBy = userId;
+                    }
+
+                    if (creatable is IUpdatable updatable)
+                    {
+                        updatable.UpdatedAt = now;
+                        updatable.UpdatedBy = userId;
+                    }
+                },
+                { State: EntityState.Modified, Entity: ISoftDeletable deletable } when deletable.IsDeleted => () =>
+                    ApplySoftDelete(deletable, now, userId),
+                { State: EntityState.Modified, Entity: IUpdatable updatable } => () =>
+                {
+                    updatable.UpdatedAt = now;
+                    updatable.UpdatedBy = userId;
+                },
+                { State: EntityState.Deleted, Entity: ISoftDeletable softDeletable } => () =>
+                {
+                    ApplySoftDelete(softDeletable, now, userId);
+                    softDeletable.IsDeleted = true;
+                    entry.State = EntityState.Modified;
+                },
+                _ => () => { }
+            };
+
+            apply();
+        }
+    }
+
+    private static void ApplySoftDelete(ISoftDeletable entity, DateTimeOffset now, string? userId)
+    {
+        entity.IsDeleted = true;
+        entity.DeletedAt = now;
+        entity.DeletedBy = userId;
     }
 }

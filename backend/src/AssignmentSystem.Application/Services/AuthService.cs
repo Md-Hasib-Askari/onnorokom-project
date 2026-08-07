@@ -24,9 +24,7 @@ public class AuthService(IUserRepository userRepository, IPasswordHasher passwor
             PasswordHash = passwordHasher.Hash(request.Password),
             Role = request.Role,
             Status = AccountStatus.Pending,
-            IsActive = true,
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
+            IsActive = true
         };
 
         await userRepository.AddAsync(user, ct);
@@ -68,7 +66,6 @@ public class AuthService(IUserRepository userRepository, IPasswordHasher passwor
             ?? throw new EntityNotFoundException($"User with id {userId} was not found.");
 
         user.Status = approve ? AccountStatus.Approved : AccountStatus.Rejected;
-        user.UpdatedAt = DateTimeOffset.UtcNow;
         await userRepository.UpdateAsync(user, ct);
         return user;
     }
@@ -102,7 +99,6 @@ public class AuthService(IUserRepository userRepository, IPasswordHasher passwor
         var accessToken = tokenService.CreateAccessToken(user);
         user.RefreshToken = tokenService.CreateRefreshToken();
         user.RefreshTokenExpiresAt = tokenService.RefreshTokenExpiresAt;
-        user.UpdatedAt = DateTimeOffset.UtcNow;
         await userRepository.UpdateAsync(user, ct);
 
         return new AuthResponse(

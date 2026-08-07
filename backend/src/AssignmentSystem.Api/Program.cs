@@ -1,7 +1,9 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using AssignmentSystem.Api.Middleware;
+using AssignmentSystem.Api.Security;
 using AssignmentSystem.Application;
+using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Infrastructure;
 using AssignmentSystem.Infrastructure.Persistence;
 using AssignmentSystem.Infrastructure.Security;
@@ -16,6 +18,8 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 builder.Services.AddOpenApi();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
