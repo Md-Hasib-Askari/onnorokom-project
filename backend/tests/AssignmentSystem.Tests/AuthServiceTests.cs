@@ -10,19 +10,23 @@ namespace AssignmentSystem.Tests;
 public class AuthServiceTests
 {
     private readonly FakeUserRepository _repo = new();
+    private readonly FakeProfileRepository _profiles = new();
+    private readonly FakeGradeRepository _grades = new();
     private readonly FakePasswordHasher _hasher = new();
     private readonly FakeTokenService _tokens = new();
     private readonly AuthService _sut;
 
     public AuthServiceTests()
     {
-        _sut = new AuthService(_repo, _hasher, _tokens, TestMappers.CreateMapper());
+        _sut = new AuthService(_repo, _profiles, _grades, _hasher, _tokens, TestMappers.CreateMapper());
     }
 
     [Fact]
     public async Task Register_CreatesPendingUserWithHashedPassword()
     {
-        var request = new RegisterRequest("Student One", "student1@test.com", "secret123", UserRole.Student);
+        var grade = Grade.Create("Grade 6", "2026");
+        _grades.Grades.Add(grade);
+        var request = new RegisterRequest("Student One", "student1@test.com", "secret123", UserRole.Student, grade.Id);
 
         var user = await _sut.RegisterAsync(request);
 
@@ -31,12 +35,16 @@ public class AuthServiceTests
         Assert.Equal("HASH:secret123", user.PasswordHash);
         Assert.Equal(AccountStatus.Pending, user.Status);
         Assert.True(user.IsActive);
+        Assert.Single(_profiles.StudentProfiles);
+        Assert.Equal(grade.Id, _profiles.StudentProfiles[0].GradeId);
     }
 
     [Fact]
     public async Task Register_NormalizesEmailToLowerCase()
     {
-        var request = new RegisterRequest("Student One", "  Student1@Test.com ", "secret123", UserRole.Student);
+        var grade = Grade.Create("Grade 6", "2026");
+        _grades.Grades.Add(grade);
+        var request = new RegisterRequest("Student One", "  Student1@Test.com ", "secret123", UserRole.Student, grade.Id);
 
         var user = await _sut.RegisterAsync(request);
 
@@ -50,6 +58,39 @@ public class AuthServiceTests
         var request = new RegisterRequest("Student Two", "existing@test.com", "secret123", UserRole.Student);
 
         await Assert.ThrowsAsync<DuplicateEmailException>(() => _sut.RegisterAsync(request));
+    }
+
+    [Fact]
+    public async Task Register_StudentWithoutGrade_ThrowsDomainExceptionAndCreatesNothing()
+    {
+        var request = new RegisterRequest("Student One", "student1@test.com", "secret123", UserRole.Student);
+
+        await Assert.ThrowsAsync<DomainException>(() => _sut.RegisterAsync(request));
+
+        Assert.Empty(_repo.Users);
+        Assert.Empty(_profiles.StudentProfiles);
+    }
+
+    [Fact]
+    public async Task Register_StudentWithUnknownGrade_ThrowsEntityNotFoundException()
+    {
+        var request = new RegisterRequest("Student One", "student1@test.com", "secret123", UserRole.Student, Guid.NewGuid());
+
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => _sut.RegisterAsync(request));
+
+        Assert.Empty(_repo.Users);
+    }
+
+    [Fact]
+    public async Task Register_Teacher_CreatesTeacherProfile()
+    {
+        var request = new RegisterRequest("Teacher One", "teacher1@test.com", "secret123", UserRole.Teacher);
+
+        var user = await _sut.RegisterAsync(request);
+
+        Assert.Equal(UserRole.Teacher, user.Role);
+        Assert.Single(_profiles.TeacherProfiles);
+        Assert.Equal(user.Id, _profiles.TeacherProfiles[0].AuthUserId);
     }
 
     [Fact]
@@ -214,6 +255,21 @@ public class AuthServiceTests
         public Task<List<AuthUser>> GetByStatusAsync(AccountStatus status, CancellationToken ct = default)
             => Task.FromResult(Users.Where(u => u.Status == status).ToList());
 
+        public Task<List<AuthUser>> GetAllAsync(CancellationToken ct = default)
+            => Task.FromResult(Users.ToList());
+
+        public Task<bool> HasAssignedSubjectsAsync(Guid userId, CancellationToken ct = default)
+            => Task.FromResult(false);
+
+        public Task<bool> HasAssignmentsAsync(Guid userId, CancellationToken ct = default)
+            => Task.FromResult(false);
+
+        public Task<bool> HasSubmissionsAsync(Guid userId, CancellationToken ct = default)
+            => Task.FromResult(false);
+
+        public Task<bool> HasGradedSubmissionsAsync(Guid userId, CancellationToken ct = default)
+            => Task.FromResult(false);
+
         public Task AddAsync(AuthUser user, CancellationToken ct = default)
         {
             Users.Add(user);
@@ -221,6 +277,62 @@ public class AuthServiceTests
         }
 
         public Task UpdateAsync(AuthUser user, CancellationToken ct = default)
+            => Task.CompletedTask;
+    }
+
+    private sealed class FakeProfileRepository : IProfileRepository
+    {
+        public List<TeacherProfile> TeacherProfiles { get; } = new();
+        public List<StudentProfile> StudentProfiles { get; } = new();
+
+        public Task<StudentProfile?> GetStudentByUserIdAsync(Guid authUserId, CancellationToken ct = default)
+            => Task.FromResult(StudentProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));
+
+        public Task AddAsync(TeacherProfile profile, CancellationToken ct = default)
+        {
+            TeacherProfiles.Add(profile);
+            return Task.CompletedTask;
+        }
+
+        public Task AddAsync(StudentProfile profile, CancellationToken ct = default)
+        {
+            StudentProfiles.Add(profile);
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(StudentProfile profile, CancellationToken ct = default)
+            => Task.CompletedTask;
+    }
+
+    private sealed class FakeGradeRepository : IGradeRepository
+    {
+        public List<Grade> Grades { get; } = new();
+
+        public Task<List<Grade>> GetAllAsync(CancellationToken ct = default)
+            => Task.FromResult(Grades.ToList());
+
+        public Task<Grade?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(Grades.FirstOrDefault(g => g.Id == id));
+
+        public Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(Grades.Any(g => g.Id == id));
+
+        public Task<bool> ExistsAsync(string name, string academicYear, CancellationToken ct = default)
+            => Task.FromResult(Grades.Any(g => g.Name == name && g.AcademicYear == academicYear));
+
+        public Task<bool> HasSubjectsAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(false);
+
+        public Task<bool> HasStudentsAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(false);
+
+        public Task AddAsync(Grade grade, CancellationToken ct = default)
+        {
+            Grades.Add(grade);
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(Grade grade, CancellationToken ct = default)
             => Task.CompletedTask;
     }
 

@@ -14,6 +14,10 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
         services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IAdminUserService, AdminUserService>();
+        services.AddScoped<IGradeService, GradeService>();
+        services.AddScoped<ISubjectService, SubjectService>();
+        services.AddScoped<IAdminQueryService, AdminQueryService>();
         return services;
     }
 }

@@ -22,7 +22,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
     {
         var (statusCode, payload) = ex switch
         {
-            DuplicateEmailException de => (StatusCodes.Status409Conflict, Error(de)),
+            DuplicateEntityException de => (StatusCodes.Status409Conflict, Error(de)),
             EntityNotFoundException nf => (StatusCodes.Status404NotFound, Error(nf)),
             DomainException d => (StatusCodes.Status400BadRequest, Error(d)),
             ValidationException ve => (StatusCodes.Status400BadRequest, ValidationError(ve)),

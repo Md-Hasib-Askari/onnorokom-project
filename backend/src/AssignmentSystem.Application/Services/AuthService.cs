@@ -7,7 +7,13 @@ using AutoMapper;
 
 namespace AssignmentSystem.Application.Services;
 
-public class AuthService(IUserRepository userRepository, IPasswordHasher passwordHasher, ITokenService tokenService, IMapper mapper) : IAuthService
+public class AuthService(
+    IUserRepository userRepository,
+    IProfileRepository profileRepository,
+    IGradeRepository gradeRepository,
+    IPasswordHasher passwordHasher,
+    ITokenService tokenService,
+    IMapper mapper) : IAuthService
 {
     public async Task<AuthUser> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
@@ -18,9 +24,22 @@ public class AuthService(IUserRepository userRepository, IPasswordHasher passwor
             throw new DuplicateEmailException(email);
         }
 
+        if (request.Role == UserRole.Student && request.StudentGradeId is null)
+        {
+            throw new DomainException("A grade is required for student users.");
+        }
+
+        if (request.Role == UserRole.Student
+            && request.StudentGradeId is not null
+            && !await gradeRepository.ExistsAsync(request.StudentGradeId.Value, ct))
+        {
+            throw new EntityNotFoundException($"Grade with id {request.StudentGradeId} was not found.");
+        }
+
         var user = AuthUser.CreatePending(request.FullName, email, passwordHasher.Hash(request.Password), request.Role);
 
         await userRepository.AddAsync(user, ct);
+        await CreateProfileAsync(user, request.StudentGradeId, ct);
         return user;
     }
 
@@ -90,6 +109,19 @@ public class AuthService(IUserRepository userRepository, IPasswordHasher passwor
                 throw new AccountPendingException();
             case AccountStatus.Rejected:
                 throw new AccountRejectedException();
+        }
+    }
+
+    private async Task CreateProfileAsync(AuthUser user, Guid? studentGradeId, CancellationToken ct)
+    {
+        switch (user.Role)
+        {
+            case UserRole.Teacher:
+                await profileRepository.AddAsync(TeacherProfile.Create(user.Id), ct);
+                break;
+            case UserRole.Student:
+                await profileRepository.AddAsync(StudentProfile.Create(user.Id, studentGradeId!.Value), ct);
+                break;
         }
     }
 

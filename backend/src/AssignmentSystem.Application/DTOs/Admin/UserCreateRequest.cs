@@ -1,10 +1,10 @@
 using AssignmentSystem.Domain.Enums;
 
-namespace AssignmentSystem.Application.DTOs.Auth;
+namespace AssignmentSystem.Application.DTOs.Admin;
 
-public record RegisterRequest(
+public record UserCreateRequest(
     string FullName,
     string Email,
     string Password,
-    UserRole Role = UserRole.Student,
+    UserRole Role,
     Guid? StudentGradeId = null);

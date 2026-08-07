@@ -14,7 +14,7 @@ public class RegisterRequestValidatorTests
     [InlineData("aB3!abcdefgh")]
     public void Validate_StrongPassword_Passes(string password)
     {
-        var request = new RegisterRequest("Student One", "student@test.com", password, UserRole.Student);
+        var request = new RegisterRequest("Student One", "student@test.com", password, UserRole.Teacher);
 
         var result = _validator.Validate(request);
 
@@ -29,11 +29,32 @@ public class RegisterRequestValidatorTests
     [InlineData("NoSpecialChar1")]
     public void Validate_WeakPassword_Fails(string password)
     {
-        var request = new RegisterRequest("Student One", "student@test.com", password, UserRole.Student);
+        var request = new RegisterRequest("Student One", "student@test.com", password, UserRole.Teacher);
 
         var result = _validator.Validate(request);
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(RegisterRequest.Password));
+    }
+
+    [Fact]
+    public void Validate_StudentWithoutGrade_Fails()
+    {
+        var request = new RegisterRequest("Student One", "student@test.com", "StrongPass1!", UserRole.Student);
+
+        var result = _validator.Validate(request);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(RegisterRequest.StudentGradeId));
+    }
+
+    [Fact]
+    public void Validate_StudentWithGrade_Passes()
+    {
+        var request = new RegisterRequest("Student One", "student@test.com", "StrongPass1!", UserRole.Student, Guid.NewGuid());
+
+        var result = _validator.Validate(request);
+
+        Assert.True(result.IsValid);
     }
 }

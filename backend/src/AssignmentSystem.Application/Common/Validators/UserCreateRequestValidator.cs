@@ -1,12 +1,12 @@
-using AssignmentSystem.Application.DTOs.Auth;
+using AssignmentSystem.Application.DTOs.Admin;
 using AssignmentSystem.Domain.Enums;
 using FluentValidation;
 
 namespace AssignmentSystem.Application.Common.Validators;
 
-public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
+public class UserCreateRequestValidator : AbstractValidator<UserCreateRequest>
 {
-    public RegisterRequestValidator()
+    public UserCreateRequestValidator()
     {
         RuleFor(x => x.FullName)
             .NotEmpty().WithMessage("Full name is required.")
@@ -27,8 +27,7 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .Matches("[^A-Za-z0-9]").WithMessage("Password must contain at least one special character.");
 
         RuleFor(x => x.Role)
-            .IsInEnum().WithMessage("Invalid role.")
-            .NotEqual(UserRole.Admin).WithMessage("Public registration is not allowed for the Admin role.");
+            .IsInEnum().WithMessage("Invalid role.");
 
         RuleFor(x => x.StudentGradeId)
             .NotNull().WithMessage("A grade is required for student users.")

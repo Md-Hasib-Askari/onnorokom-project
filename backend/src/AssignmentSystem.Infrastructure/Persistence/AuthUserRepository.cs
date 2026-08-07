@@ -35,6 +35,33 @@ public class AuthUserRepository(AppDbContext dbContext) : IUserRepository
             .ToListAsync(ct);
     }
 
+    public async Task<List<AuthUser>> GetAllAsync(CancellationToken ct = default)
+    {
+        return await dbContext.AuthUsers
+            .OrderBy(u => u.CreatedAt)
+            .ToListAsync(ct);
+    }
+
+    public async Task<bool> HasAssignedSubjectsAsync(Guid userId, CancellationToken ct = default)
+    {
+        return await dbContext.Subjects.AnyAsync(s => s.TeacherId == userId, ct);
+    }
+
+    public async Task<bool> HasAssignmentsAsync(Guid userId, CancellationToken ct = default)
+    {
+        return await dbContext.Assignments.AnyAsync(a => a.TeacherId == userId, ct);
+    }
+
+    public async Task<bool> HasSubmissionsAsync(Guid userId, CancellationToken ct = default)
+    {
+        return await dbContext.Submissions.AnyAsync(s => s.StudentId == userId, ct);
+    }
+
+    public async Task<bool> HasGradedSubmissionsAsync(Guid userId, CancellationToken ct = default)
+    {
+        return await dbContext.Submissions.AnyAsync(s => s.GradedByTeacherId == userId, ct);
+    }
+
     public async Task AddAsync(AuthUser user, CancellationToken ct = default)
     {
         dbContext.AuthUsers.Add(user);
