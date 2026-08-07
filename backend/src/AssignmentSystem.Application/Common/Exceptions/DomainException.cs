@@ -1,15 +1,9 @@
 namespace AssignmentSystem.Application.Common.Exceptions;
 
-public class DomainException : Exception
-{
-    public DomainException(string message) : base(message) { }
-}
+public class DomainException(string message) : Exception(message);
 
-public class DuplicateEmailException : DomainException
-{
-    public DuplicateEmailException(string email)
-        : base($"A user with email '{email}' already exists.") { }
-}
+public class DuplicateEmailException(string email)
+    : DomainException($"A user with email '{email}' already exists.");
 
 public class InvalidCredentialsException : DomainException
 {
@@ -41,7 +35,4 @@ public class InvalidRefreshTokenException : DomainException
         : base("Refresh token is invalid or has expired.") { }
 }
 
-public class EntityNotFoundException : DomainException
-{
-    public EntityNotFoundException(string message) : base(message) { }
-}
+public class EntityNotFoundException(string message) : DomainException(message);

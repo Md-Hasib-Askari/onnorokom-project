@@ -6,24 +6,13 @@ using AssignmentSystem.Domain.Enums;
 
 namespace AssignmentSystem.Application.Services;
 
-public class AuthService : IAuthService
+public class AuthService(IUserRepository userRepository, IPasswordHasher passwordHasher, ITokenService tokenService) : IAuthService
 {
-    private readonly IUserRepository _userRepository;
-    private readonly IPasswordHasher _passwordHasher;
-    private readonly ITokenService _tokenService;
-
-    public AuthService(IUserRepository userRepository, IPasswordHasher passwordHasher, ITokenService tokenService)
-    {
-        _userRepository = userRepository;
-        _passwordHasher = passwordHasher;
-        _tokenService = tokenService;
-    }
-
     public async Task<AuthUser> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
         var email = request.Email.Trim().ToLowerInvariant();
 
-        if (await _userRepository.ExistsByEmailAsync(email, ct))
+        if (await userRepository.ExistsByEmailAsync(email, ct))
         {
             throw new DuplicateEmailException(email);
         }
@@ -32,7 +21,7 @@ public class AuthService : IAuthService
         {
             FullName = request.FullName.Trim(),
             Email = email,
-            PasswordHash = _passwordHasher.Hash(request.Password),
+            PasswordHash = passwordHasher.Hash(request.Password),
             Role = request.Role,
             Status = AccountStatus.Pending,
             IsActive = true,
@@ -40,16 +29,16 @@ public class AuthService : IAuthService
             UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        await _userRepository.AddAsync(user, ct);
+        await userRepository.AddAsync(user, ct);
         return user;
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {
         var email = request.Email.Trim().ToLowerInvariant();
-        var user = await _userRepository.GetByEmailAsync(email, ct);
+        var user = await userRepository.GetByEmailAsync(email, ct);
 
-        if (user is null || !_passwordHasher.Verify(request.Password, user.PasswordHash))
+        if (user is null || !passwordHasher.Verify(request.Password, user.PasswordHash))
         {
             throw new InvalidCredentialsException();
         }
@@ -60,7 +49,7 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponse> RefreshAsync(string refreshToken, CancellationToken ct = default)
     {
-        var user = await _userRepository.GetByRefreshTokenAsync(refreshToken, ct);
+        var user = await userRepository.GetByRefreshTokenAsync(refreshToken, ct);
 
         if (user is null
             || user.RefreshTokenExpiresAt is null
@@ -75,18 +64,18 @@ public class AuthService : IAuthService
 
     public async Task<AuthUser> ApproveAsync(Guid userId, bool approve, CancellationToken ct = default)
     {
-        var user = await _userRepository.GetByIdAsync(userId, ct)
+        var user = await userRepository.GetByIdAsync(userId, ct)
             ?? throw new EntityNotFoundException($"User with id {userId} was not found.");
 
         user.Status = approve ? AccountStatus.Approved : AccountStatus.Rejected;
         user.UpdatedAt = DateTimeOffset.UtcNow;
-        await _userRepository.UpdateAsync(user, ct);
+        await userRepository.UpdateAsync(user, ct);
         return user;
     }
 
     public async Task<List<UserListItemDto>> GetPendingUsersAsync(CancellationToken ct = default)
     {
-        var users = await _userRepository.GetByStatusAsync(AccountStatus.Pending, ct);
+        var users = await userRepository.GetByStatusAsync(AccountStatus.Pending, ct);
         return users
             .Select(u => new UserListItemDto(u.Id, u.FullName, u.Email, u.Role, u.Status, u.CreatedAt))
             .ToList();
@@ -110,16 +99,16 @@ public class AuthService : IAuthService
 
     private async Task<AuthResponse> IssueTokensAsync(AuthUser user, CancellationToken ct)
     {
-        var accessToken = _tokenService.CreateAccessToken(user);
-        user.RefreshToken = _tokenService.CreateRefreshToken();
-        user.RefreshTokenExpiresAt = _tokenService.RefreshTokenExpiresAt;
+        var accessToken = tokenService.CreateAccessToken(user);
+        user.RefreshToken = tokenService.CreateRefreshToken();
+        user.RefreshTokenExpiresAt = tokenService.RefreshTokenExpiresAt;
         user.UpdatedAt = DateTimeOffset.UtcNow;
-        await _userRepository.UpdateAsync(user, ct);
+        await userRepository.UpdateAsync(user, ct);
 
         return new AuthResponse(
             accessToken,
             user.RefreshToken,
-            _tokenService.AccessTokenExpiresAt,
+            tokenService.AccessTokenExpiresAt,
             user.Id,
             user.FullName,
             user.Email,

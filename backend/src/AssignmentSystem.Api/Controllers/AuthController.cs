@@ -8,36 +8,23 @@ namespace AssignmentSystem.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController : ControllerBase
+public class AuthController(
+    IAuthService authService,
+    IValidator<RegisterRequest> registerValidator,
+    IValidator<LoginRequest> loginValidator,
+    IValidator<RefreshTokenRequest> refreshTokenValidator) : ControllerBase
 {
-    private readonly IAuthService _authService;
-    private readonly IValidator<RegisterRequest> _registerValidator;
-    private readonly IValidator<LoginRequest> _loginValidator;
-    private readonly IValidator<RefreshTokenRequest> _refreshTokenValidator;
-
-    public AuthController(
-        IAuthService authService,
-        IValidator<RegisterRequest> registerValidator,
-        IValidator<LoginRequest> loginValidator,
-        IValidator<RefreshTokenRequest> refreshTokenValidator)
-    {
-        _authService = authService;
-        _registerValidator = registerValidator;
-        _loginValidator = loginValidator;
-        _refreshTokenValidator = refreshTokenValidator;
-    }
-
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken ct)
     {
-        var validation = await _registerValidator.ValidateAsync(request, ct);
+        var validation = await registerValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
             throw new ValidationException(validation.Errors);
         }
 
-        var user = await _authService.RegisterAsync(request, ct);
+        var user = await authService.RegisterAsync(request, ct);
         return Ok(new { user.Id, user.Email, user.FullName, user.Role, user.Status });
     }
 
@@ -45,13 +32,13 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {
-        var validation = await _loginValidator.ValidateAsync(request, ct);
+        var validation = await loginValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
             throw new ValidationException(validation.Errors);
         }
 
-        var response = await _authService.LoginAsync(request, ct);
+        var response = await authService.LoginAsync(request, ct);
         return Ok(response);
     }
 
@@ -59,13 +46,13 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request, CancellationToken ct)
     {
-        var validation = await _refreshTokenValidator.ValidateAsync(request, ct);
+        var validation = await refreshTokenValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
             throw new ValidationException(validation.Errors);
         }
 
-        var response = await _authService.RefreshAsync(request.RefreshToken, ct);
+        var response = await authService.RefreshAsync(request.RefreshToken, ct);
         return Ok(response);
     }
 }
