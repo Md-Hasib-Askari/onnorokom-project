@@ -7,15 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AssignmentSystem.Infrastructure.Persistence;
 
-public class AppDbContext : DbContext
+public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser currentUser)
+    : DbContext(options)
 {
-    private readonly ICurrentUser _currentUser;
-
-    public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser currentUser) : base(options)
-    {
-        _currentUser = currentUser;
-    }
-
     public DbSet<AuthUser> AuthUsers => Set<AuthUser>();
     public DbSet<TeacherProfile> TeacherProfiles => Set<TeacherProfile>();
     public DbSet<StudentProfile> StudentProfiles => Set<StudentProfile>();
@@ -67,7 +61,7 @@ public class AppDbContext : DbContext
     private void ApplyAuditFields()
     {
         var now = DateTimeOffset.UtcNow;
-        var userId = _currentUser.UserId;
+        var userId = currentUser.UserId;
 
         foreach (var entry in ChangeTracker.Entries())
         {

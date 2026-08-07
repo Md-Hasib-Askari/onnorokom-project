@@ -19,15 +19,7 @@ public class DbInitializer(AppDbContext dbContext, IPasswordHasher passwordHashe
             return;
         }
 
-        var admin = new AuthUser
-        {
-            FullName = "System Administrator",
-            Email = AdminEmail,
-            PasswordHash = passwordHasher.Hash(AdminPassword),
-            Role = UserRole.Admin,
-            Status = AccountStatus.Approved,
-            IsActive = true
-        };
+        var admin = AuthUser.CreateApprovedAdmin("System Administrator", AdminEmail, passwordHasher.Hash(AdminPassword));
 
         dbContext.AuthUsers.Add(admin);
         await dbContext.SaveChangesAsync(ct);
