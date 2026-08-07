@@ -8,6 +8,6 @@ public class GradeConfiguration : IEntityTypeConfiguration<Grade>
 {
     public void Configure(EntityTypeBuilder<Grade> builder)
     {
-        builder.HasIndex(x => new { x.Name, x.AcademicYear }).IsUnique();
+        builder.HasIndex(x => new { x.Name, x.AcademicYear }).IsUnique().HasFilter("\"IsDeleted\" = false");
     }
 }

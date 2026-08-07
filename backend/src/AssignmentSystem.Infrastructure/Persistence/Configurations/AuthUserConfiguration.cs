@@ -10,6 +10,6 @@ public class AuthUserConfiguration : IEntityTypeConfiguration<AuthUser>
     {
         builder.Property(x => x.Role).HasConversion<string>();
         builder.Property(x => x.Status).HasConversion<string>();
-        builder.HasIndex(x => x.Email).IsUnique();
+        builder.HasIndex(x => x.Email).IsUnique().HasFilter("\"IsDeleted\" = false");
     }
 }
