@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using AssignmentSystem.Domain.Common;
 using AssignmentSystem.Domain.Entities;
-using AssignmentSystem.Domain.Enums;
+using AssignmentSystem.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
 
 namespace AssignmentSystem.Infrastructure.Persistence;
@@ -23,17 +23,11 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<AuthUser>().Property(x => x.Role).HasConversion<string>();
-        modelBuilder.Entity<AuthUser>().Property(x => x.Status).HasConversion<string>();
-        modelBuilder.Entity<Assignment>().Property(x => x.Status).HasConversion<string>();
-        modelBuilder.Entity<Submission>().Property(x => x.Status).HasConversion<string>();
-
-        modelBuilder.Entity<Assignment>().Property(x => x.MaxMarks).HasPrecision(10, 2);
-        modelBuilder.Entity<Submission>().Property(x => x.Marks).HasPrecision(10, 2);
-
-        modelBuilder.Entity<AuthUser>().HasIndex(x => x.Email).IsUnique();
-        modelBuilder.Entity<Grade>().HasIndex(x => new { x.Name, x.AcademicYear }).IsUnique();
-        modelBuilder.Entity<Subject>().HasIndex(x => new { x.Code, x.GradeId }).IsUnique();
+        modelBuilder.ApplyConfiguration(new AuthUserConfiguration());
+        modelBuilder.ApplyConfiguration(new GradeConfiguration());
+        modelBuilder.ApplyConfiguration(new SubjectConfiguration());
+        modelBuilder.ApplyConfiguration(new AssignmentConfiguration());
+        modelBuilder.ApplyConfiguration(new SubmissionConfiguration());
 
         ApplySoftDeleteQueryFilters(modelBuilder);
     }
