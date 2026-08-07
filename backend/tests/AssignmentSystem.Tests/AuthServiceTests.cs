@@ -55,7 +55,6 @@ public class AuthServiceTests
     public async Task Login_ValidCredentials_ReturnsTokensAndUserInfo()
     {
         var user = CreateUser(email: "approved@test.com", status: AccountStatus.Approved, password: "correct");
-        user.PasswordHash = "HASH:correct";
         _repo.Users.Add(user);
 
         var response = await _sut.LoginAsync(new("approved@test.com", "correct"));
@@ -70,7 +69,6 @@ public class AuthServiceTests
     public async Task Login_WrongPassword_ThrowsInvalidCredentialsException()
     {
         var user = CreateUser(email: "approved@test.com", status: AccountStatus.Approved, password: "correct");
-        user.PasswordHash = "HASH:correct";
         _repo.Users.Add(user);
 
         await Assert.ThrowsAsync<InvalidCredentialsException>(() => _sut.LoginAsync(new("approved@test.com", "wrong")));
@@ -86,7 +84,6 @@ public class AuthServiceTests
     public async Task Login_PendingAccount_ThrowsAccountPendingException()
     {
         var user = CreateUser(email: "pending@test.com", status: AccountStatus.Pending, password: "correct");
-        user.PasswordHash = "HASH:correct";
         _repo.Users.Add(user);
 
         await Assert.ThrowsAsync<AccountPendingException>(() => _sut.LoginAsync(new("pending@test.com", "correct")));
@@ -96,7 +93,6 @@ public class AuthServiceTests
     public async Task Login_RejectedAccount_ThrowsAccountRejectedException()
     {
         var user = CreateUser(email: "rejected@test.com", status: AccountStatus.Rejected, password: "correct");
-        user.PasswordHash = "HASH:correct";
         _repo.Users.Add(user);
 
         await Assert.ThrowsAsync<AccountRejectedException>(() => _sut.LoginAsync(new("rejected@test.com", "correct")));
@@ -106,8 +102,7 @@ public class AuthServiceTests
     public async Task Login_InactiveAccount_ThrowsAccountInactiveException()
     {
         var user = CreateUser(email: "inactive@test.com", status: AccountStatus.Approved, password: "correct");
-        user.PasswordHash = "HASH:correct";
-        user.IsActive = false;
+        user.Deactivate();
         _repo.Users.Add(user);
 
         await Assert.ThrowsAsync<AccountInactiveException>(() => _sut.LoginAsync(new("inactive@test.com", "correct")));
@@ -117,8 +112,7 @@ public class AuthServiceTests
     public async Task Refresh_ValidToken_RotatesTokens()
     {
         var user = CreateUser(email: "approved@test.com", status: AccountStatus.Approved);
-        user.RefreshToken = "valid-refresh";
-        user.RefreshTokenExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5);
+        user.SetRefreshToken("valid-refresh", DateTimeOffset.UtcNow.AddMinutes(5));
         _repo.Users.Add(user);
 
         var response = await _sut.RefreshAsync("valid-refresh");
@@ -137,8 +131,7 @@ public class AuthServiceTests
     public async Task Refresh_ExpiredToken_ThrowsInvalidRefreshTokenException()
     {
         var user = CreateUser(email: "approved@test.com", status: AccountStatus.Approved);
-        user.RefreshToken = "expired-refresh";
-        user.RefreshTokenExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+        user.SetRefreshToken("expired-refresh", DateTimeOffset.UtcNow.AddMinutes(-1));
         _repo.Users.Add(user);
 
         await Assert.ThrowsAsync<InvalidRefreshTokenException>(() => _sut.RefreshAsync("expired-refresh"));
@@ -187,18 +180,18 @@ public class AuthServiceTests
 
     private static AuthUser CreateUser(string email, AccountStatus status = AccountStatus.Pending, string password = "secret123")
     {
-        return new AuthUser
+        var user = AuthUser.CreatePending("Test User", email, $"HASH:{password}", UserRole.Student);
+
+        if (status == AccountStatus.Approved)
         {
-            Id = Guid.NewGuid(),
-            FullName = "Test User",
-            Email = email,
-            PasswordHash = $"HASH:{password}",
-            Role = UserRole.Student,
-            Status = status,
-            IsActive = true,
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
-        };
+            user.Approve();
+        }
+        else if (status == AccountStatus.Rejected)
+        {
+            user.Reject();
+        }
+
+        return user;
     }
 
     private sealed class FakeUserRepository : IUserRepository
@@ -222,11 +215,6 @@ public class AuthServiceTests
 
         public Task AddAsync(AuthUser user, CancellationToken ct = default)
         {
-            if (user.Id == Guid.Empty)
-            {
-                user.Id = Guid.NewGuid();
-            }
-
             Users.Add(user);
             return Task.CompletedTask;
         }
