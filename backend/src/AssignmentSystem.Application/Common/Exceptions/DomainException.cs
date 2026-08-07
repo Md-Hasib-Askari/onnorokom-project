@@ -3,7 +3,7 @@ namespace AssignmentSystem.Application.Common.Exceptions;
 public class DomainException(string message) : Exception(message);
 
 public class DuplicateEmailException(string email)
-    : DomainException($"A user with email '{email}' already exists.");
+    : DuplicateEntityException($"A user with email '{email}' already exists.");
 
 public class InvalidCredentialsException : DomainException
 {
@@ -36,3 +36,9 @@ public class InvalidRefreshTokenException : DomainException
 }
 
 public class EntityNotFoundException(string message) : DomainException(message);
+
+public class DuplicateEntityException(string message) : DomainException(message);
+
+public class InvalidTeacherException(string message) : DomainException(message);
+
+public class EntityInUseException(string message) : DomainException(message);
