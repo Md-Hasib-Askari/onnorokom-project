@@ -1,5 +1,6 @@
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.DTOs.Auth;
 using AssignmentSystem.Application.Services;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
@@ -15,13 +16,13 @@ public class AuthServiceTests
 
     public AuthServiceTests()
     {
-        _sut = new AuthService(_repo, _hasher, _tokens);
+        _sut = new AuthService(_repo, _hasher, _tokens, TestMappers.CreateMapper());
     }
 
     [Fact]
     public async Task Register_CreatesPendingUserWithHashedPassword()
     {
-        var request = new Application.DTOs.Auth.RegisterRequest("Student One", "student1@test.com", "secret123", UserRole.Student);
+        var request = new RegisterRequest("Student One", "student1@test.com", "secret123", UserRole.Student);
 
         var user = await _sut.RegisterAsync(request);
 
@@ -35,7 +36,7 @@ public class AuthServiceTests
     [Fact]
     public async Task Register_NormalizesEmailToLowerCase()
     {
-        var request = new Application.DTOs.Auth.RegisterRequest("Student One", "  Student1@Test.com ", "secret123", UserRole.Student);
+        var request = new RegisterRequest("Student One", "  Student1@Test.com ", "secret123", UserRole.Student);
 
         var user = await _sut.RegisterAsync(request);
 
@@ -46,7 +47,7 @@ public class AuthServiceTests
     public async Task Register_DuplicateEmail_ThrowsDuplicateEmailException()
     {
         _repo.Users.Add(CreateUser(email: "existing@test.com"));
-        var request = new Application.DTOs.Auth.RegisterRequest("Student Two", "existing@test.com", "secret123", UserRole.Student);
+        var request = new RegisterRequest("Student Two", "existing@test.com", "secret123", UserRole.Student);
 
         await Assert.ThrowsAsync<DuplicateEmailException>(() => _sut.RegisterAsync(request));
     }
@@ -196,7 +197,7 @@ public class AuthServiceTests
 
     private sealed class FakeUserRepository : IUserRepository
     {
-        public List<AuthUser> Users { get; } = new();
+        public List<AuthUser> Users { get; } = [];
 
         public Task<AuthUser?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));

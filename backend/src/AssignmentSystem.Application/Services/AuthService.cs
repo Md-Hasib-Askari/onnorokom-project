@@ -3,10 +3,11 @@ using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.DTOs.Auth;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
+using AutoMapper;
 
 namespace AssignmentSystem.Application.Services;
 
-public class AuthService(IUserRepository userRepository, IPasswordHasher passwordHasher, ITokenService tokenService) : IAuthService
+public class AuthService(IUserRepository userRepository, IPasswordHasher passwordHasher, ITokenService tokenService, IMapper mapper) : IAuthService
 {
     public async Task<AuthUser> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
@@ -73,11 +74,7 @@ public class AuthService(IUserRepository userRepository, IPasswordHasher passwor
     public async Task<List<UserListItemDto>> GetPendingUsersAsync(CancellationToken ct = default)
     {
         var users = await userRepository.GetByStatusAsync(AccountStatus.Pending, ct);
-        return
-        [
-            .. users
-                .Select(u => new UserListItemDto(u.Id, u.FullName, u.Email, u.Role, u.Status, u.CreatedAt))
-        ];
+        return mapper.Map<List<UserListItemDto>>(users);
     }
 
     private void EnsureUsable(AuthUser user)
