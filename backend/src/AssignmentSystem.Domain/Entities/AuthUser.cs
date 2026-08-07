@@ -3,22 +3,59 @@ using AssignmentSystem.Domain.Enums;
 
 namespace AssignmentSystem.Domain.Entities;
 
-public class AuthUser : BaseEntity, ICreatable, IUpdatable, ISoftDeletable
+public class AuthUser : BaseEntity
 {
-    public string FullName { get; set; } = null!;
-    public string Email { get; set; } = null!;
-    public string PasswordHash { get; set; } = null!;
-    public UserRole Role { get; set; }
-    public AccountStatus Status { get; set; } = AccountStatus.Pending;
-    public bool IsActive { get; set; } = true;
-    public string? RefreshToken { get; set; }
-    public DateTimeOffset? RefreshTokenExpiresAt { get; set; }
+    public string FullName { get; private set; } = null!;
+    public string Email { get; private set; } = null!;
+    public string PasswordHash { get; private set; } = null!;
+    public UserRole Role { get; private set; }
+    public AccountStatus Status { get; private set; } = AccountStatus.Pending;
+    public bool IsActive { get; private set; } = true;
+    public string? RefreshToken { get; private set; }
+    public DateTimeOffset? RefreshTokenExpiresAt { get; private set; }
 
-    public DateTimeOffset CreatedAt { get; set; }
-    public string? CreatedBy { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
-    public string? UpdatedBy { get; set; }
-    public bool IsDeleted { get; set; }
-    public DateTimeOffset? DeletedAt { get; set; }
-    public string? DeletedBy { get; set; }
+    private AuthUser()
+    {
+    }
+
+    public void Approve()
+    {
+        Status = AccountStatus.Approved;
+    }
+
+    public void Reject()
+    {
+        Status = AccountStatus.Rejected;
+    }
+
+    public void Deactivate()
+    {
+        IsActive = false;
+    }
+
+    public void SetRefreshToken(string refreshToken, DateTimeOffset expiresAt)
+    {
+        RefreshToken = refreshToken;
+        RefreshTokenExpiresAt = expiresAt;
+    }
+
+    public static AuthUser CreatePending(string fullName, string email, string passwordHash, UserRole role)
+    {
+        return new AuthUser
+        {
+            FullName = fullName.Trim(),
+            Email = email.Trim().ToLowerInvariant(),
+            PasswordHash = passwordHash,
+            Role = role,
+            Status = AccountStatus.Pending,
+            IsActive = true
+        };
+    }
+
+    public static AuthUser CreateApprovedAdmin(string fullName, string email, string passwordHash)
+    {
+        var admin = CreatePending(fullName, email, passwordHash, UserRole.Admin);
+        admin.Approve();
+        return admin;
+    }
 }

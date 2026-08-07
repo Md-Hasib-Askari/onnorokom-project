@@ -2,19 +2,23 @@ using AssignmentSystem.Domain.Common;
 
 namespace AssignmentSystem.Domain.Entities;
 
-public class AdminProfile : BaseEntity, ICreatable, IUpdatable, ISoftDeletable
+public class AdminProfile : BaseEntity
 {
-        public Guid AuthUserId { get; set; }
-    public string? Position { get; set; }
-    public string? PhoneNumber { get; set; }
+    public Guid AuthUserId { get; private set; }
+    public string? Position { get; private set; }
+    public string? PhoneNumber { get; private set; }
 
-    public virtual AuthUser? AuthUser { get; set; }
+    public virtual AuthUser? AuthUser { get; private set; }
 
-    public DateTimeOffset CreatedAt { get; set; }
-    public string? CreatedBy { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
-    public string? UpdatedBy { get; set; }
-    public bool IsDeleted { get; set; }
-    public DateTimeOffset? DeletedAt { get; set; }
-    public string? DeletedBy { get; set; }
+    private AdminProfile()
+    {
+    }
+
+    public static AdminProfile Create(Guid authUserId)
+    {
+        return new AdminProfile
+        {
+            AuthUserId = authUserId
+        };
+    }
 }
