@@ -19,4 +19,9 @@ public abstract class BaseEntity : ICreatable, IUpdatable, ISoftDeletable
     bool ISoftDeletable.IsDeleted { get => IsDeleted; set => IsDeleted = value; }
     DateTimeOffset? ISoftDeletable.DeletedAt { get => DeletedAt; set => DeletedAt = value; }
     string? ISoftDeletable.DeletedBy { get => DeletedBy; set => DeletedBy = value; }
+
+    public void Delete()
+    {
+        IsDeleted = true;
+    }
 }

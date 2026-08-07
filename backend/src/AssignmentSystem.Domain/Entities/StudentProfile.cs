@@ -22,6 +22,11 @@ public class StudentProfile : BaseEntity
     {
     }
 
+    public void ChangeGrade(Guid gradeId)
+    {
+        GradeId = gradeId;
+    }
+
     public static StudentProfile Create(Guid authUserId, Guid gradeId)
     {
         return new StudentProfile

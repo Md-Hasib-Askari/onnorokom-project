@@ -16,6 +16,23 @@ public class Subject : BaseEntity
     {
     }
 
+    public void Update(string name, string code, Guid gradeId)
+    {
+        Name = name;
+        Code = code;
+        GradeId = gradeId;
+    }
+
+    public void AssignTeacher(Guid teacherId)
+    {
+        TeacherId = teacherId;
+    }
+
+    public void UnassignTeacher()
+    {
+        TeacherId = null;
+    }
+
     public static Subject Create(string name, string code, Guid gradeId, Guid? teacherId = null)
     {
         return new Subject

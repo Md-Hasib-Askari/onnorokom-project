@@ -12,6 +12,13 @@ public class Grade : BaseEntity
     {
     }
 
+    public void Update(string name, string academicYear, string? description)
+    {
+        Name = name;
+        AcademicYear = academicYear;
+        Description = description;
+    }
+
     public static Grade Create(string name, string academicYear, string? description = null)
     {
         return new Grade

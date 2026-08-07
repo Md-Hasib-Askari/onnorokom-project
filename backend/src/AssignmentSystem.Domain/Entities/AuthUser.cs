@@ -33,6 +33,17 @@ public class AuthUser : BaseEntity
         IsActive = false;
     }
 
+    public void Reactivate()
+    {
+        IsActive = true;
+    }
+
+    public void UpdateDetails(string fullName, string email)
+    {
+        FullName = fullName.Trim();
+        Email = email.Trim().ToLowerInvariant();
+    }
+
     public void SetRefreshToken(string refreshToken, DateTimeOffset expiresAt)
     {
         RefreshToken = refreshToken;
