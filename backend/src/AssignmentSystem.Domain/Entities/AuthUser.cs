@@ -13,6 +13,8 @@ public class AuthUser : BaseEntity
     public bool IsActive { get; private set; } = true;
     public string? RefreshToken { get; private set; }
     public DateTimeOffset? RefreshTokenExpiresAt { get; private set; }
+    public bool IsUsableAdmin => Role == UserRole.Admin && Status == AccountStatus.Approved && IsActive;
+    public bool IsUsableTeacher => Role == UserRole.Teacher && Status == AccountStatus.Approved && IsActive;
 
     private AuthUser()
     {
@@ -38,6 +40,34 @@ public class AuthUser : BaseEntity
     public void Deactivate()
     {
         IsActive = false;
+    }
+
+    public void ApplyStatus(AccountStatus status, bool isActive)
+    {
+        switch (status)
+        {
+            case AccountStatus.Approved:
+                if (Status != AccountStatus.Approved)
+                {
+                    Approve();
+                }
+
+                if (isActive)
+                {
+                    Activate();
+                }
+                else
+                {
+                    Deactivate();
+                }
+
+                break;
+            case AccountStatus.Rejected:
+                Reject();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(status), status, "Only Approved or Rejected statuses can be applied.");
+        }
     }
 
     public void UpdateDetails(string fullName, string email)

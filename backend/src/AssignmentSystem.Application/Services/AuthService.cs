@@ -1,3 +1,4 @@
+using AssignmentSystem.Application.Common;
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.DTOs.Auth;
@@ -25,17 +26,7 @@ public class AuthService(
             throw new DuplicateEmailException(email);
         }
 
-        if (request.Role == UserRole.Student && request.StudentGradeId is null)
-        {
-            throw new DomainException("A grade is required for student users.");
-        }
-
-        if (request.Role == UserRole.Student
-            && request.StudentGradeId is not null
-            && !await gradeRepository.ExistsAsync(request.StudentGradeId.Value, ct))
-        {
-            throw new EntityNotFoundException($"Grade with id {request.StudentGradeId} was not found.");
-        }
+        await UserGuards.EnsureStudentGradeValidAsync(gradeRepository, request.Role, request.StudentGradeId, ct);
 
         var user = AuthUser.CreatePending(request.FullName, email, passwordHasher.Hash(request.Password), request.Role);
 
@@ -92,13 +83,11 @@ public class AuthService(
         }
         else
         {
-            if (user.Role == UserRole.Admin
-                && user.Status == AccountStatus.Approved
-                && user.IsActive
-                && await userRepository.CountUsableAdminsAsync(ct) <= 1)
-            {
-                throw new DomainException("The last admin account cannot be rejected.");
-            }
+            await UserGuards.EnsureNotLastUsableAdminAsync(
+                userRepository,
+                user.IsUsableAdmin,
+                "The last admin account cannot be rejected.",
+                ct);
 
             user.Reject();
         }

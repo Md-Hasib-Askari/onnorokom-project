@@ -104,7 +104,7 @@ public class SubjectService(
         }
 
         var teacher = await userRepository.GetByIdAsync(teacherId.Value, ct);
-        if (teacher is null || teacher.Role != UserRole.Teacher || teacher.Status != AccountStatus.Approved || !teacher.IsActive)
+        if (teacher is null || !teacher.IsUsableTeacher)
         {
             throw new InvalidTeacherException($"User with id {teacherId} is not an approved active teacher.");
         }

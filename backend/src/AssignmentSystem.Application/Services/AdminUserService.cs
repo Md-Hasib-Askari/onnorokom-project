@@ -1,3 +1,4 @@
+using AssignmentSystem.Application.Common;
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.DTOs.Admin;
@@ -33,17 +34,7 @@ public class AdminUserService(
             throw new DuplicateEmailException(email);
         }
 
-        if (request.Role == UserRole.Student && request.StudentGradeId is null)
-        {
-            throw new DomainException("A grade is required for student users.");
-        }
-
-        if (request.Role == UserRole.Student
-            && request.StudentGradeId is not null
-            && !await gradeRepository.ExistsAsync(request.StudentGradeId.Value, ct))
-        {
-            throw new EntityNotFoundException($"Grade with id {request.StudentGradeId} was not found.");
-        }
+        await UserGuards.EnsureStudentGradeValidAsync(gradeRepository, request.Role, request.StudentGradeId, ct);
 
         var user = AuthUser.CreatePending(request.FullName, email, passwordHasher.Hash(request.Password), request.Role);
         user.Approve();
@@ -67,56 +58,25 @@ public class AdminUserService(
             throw new DuplicateEmailException(email);
         }
 
-        if (user.Role == UserRole.Student && request.StudentGradeId is null)
-        {
-            throw new DomainException("A grade is required for student users.");
-        }
-
-        if (user.Role == UserRole.Student
-            && request.StudentGradeId is not null
-            && !await gradeRepository.ExistsAsync(request.StudentGradeId.Value, ct))
-        {
-            throw new EntityNotFoundException($"Grade with id {request.StudentGradeId} was not found.");
-        }
+        await UserGuards.EnsureStudentGradeValidAsync(gradeRepository, user.Role, request.StudentGradeId, ct);
 
         if (request.Status == AccountStatus.Pending)
         {
             throw new DomainException("Pending cannot be set via user update; use the approval endpoint.");
         }
 
-        var willBecomeUnusableAdmin = user.Role == UserRole.Admin
-            && user.Status == AccountStatus.Approved
-            && user.IsActive
+        var willBecomeUnusableAdmin = user.IsUsableAdmin
             && (request.Status == AccountStatus.Rejected
                 || (request.Status == AccountStatus.Approved && !request.IsActive));
 
-        if (willBecomeUnusableAdmin && await userRepository.CountUsableAdminsAsync(ct) <= 1)
-        {
-            throw new DomainException("The last admin account cannot be deactivated or rejected.");
-        }
+        await UserGuards.EnsureNotLastUsableAdminAsync(
+            userRepository,
+            willBecomeUnusableAdmin,
+            "The last admin account cannot be deactivated or rejected.",
+            ct);
 
         user.UpdateDetails(request.FullName, email);
-
-        if (request.Status == AccountStatus.Approved)
-        {
-            if (user.Status != AccountStatus.Approved)
-            {
-                user.Approve();
-            }
-
-            if (request.IsActive)
-            {
-                user.Activate();
-            }
-            else
-            {
-                user.Deactivate();
-            }
-        }
-        else if (request.Status == AccountStatus.Rejected)
-        {
-            user.Reject();
-        }
+        user.ApplyStatus(request.Status, request.IsActive);
 
         await transactionService.ExecuteAsync(async transactionCt =>
         {
@@ -136,13 +96,11 @@ public class AdminUserService(
             throw new DomainException("You cannot delete your own account.");
         }
 
-        if (user.Role == UserRole.Admin
-            && user.Status == AccountStatus.Approved
-            && user.IsActive
-            && await userRepository.CountUsableAdminsAsync(ct) <= 1)
-        {
-            throw new DomainException("The last admin account cannot be deleted.");
-        }
+        await UserGuards.EnsureNotLastUsableAdminAsync(
+            userRepository,
+            user.IsUsableAdmin,
+            "The last admin account cannot be deleted.",
+            ct);
 
         if (await IsInUseAsync(user, ct))
         {
