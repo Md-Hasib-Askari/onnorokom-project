@@ -18,7 +18,7 @@ public class AdminUserServiceTests
 
     public AdminUserServiceTests()
     {
-        _sut = new AdminUserService(_users, _profiles, _grades, _hasher, new FakeTransactionService(), _currentUser, new ProfileProvisioningService(_profiles), TestMappers.CreateMapper());
+        _sut = new AdminUserService(_users, _profiles, _grades, _hasher, new FakeTransactionService(), _currentUser, new ProfileProvisioningService(_profiles));
     }
 
     [Fact]
@@ -569,6 +569,34 @@ public class AdminUserServiceTests
         Assert.Equal(2, users.Count);
     }
 
+    [Fact]
+    public async Task GetAllUsers_IncludesIsActiveAndStudentGrade()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        _grades.Grades.Add(grade);
+        var student = AuthUser.CreatePending("Student One", "student@test.com", "hash", UserRole.Student);
+        student.Approve();
+        _users.Users.Add(student);
+        _profiles.StudentProfiles.Add(StudentProfile.Create(student.Id, grade.Id));
+
+        var teacher = AuthUser.CreatePending("Teacher One", "teacher@test.com", "hash", UserRole.Teacher);
+        teacher.Approve();
+        teacher.Deactivate();
+        _users.Users.Add(teacher);
+
+        var users = await _sut.GetAllUsersAsync();
+
+        var studentDto = users.Single(u => u.Id == student.Id);
+        Assert.True(studentDto.IsActive);
+        Assert.Equal(grade.Id, studentDto.StudentGradeId);
+        Assert.Equal("Grade 6", studentDto.GradeName);
+
+        var teacherDto = users.Single(u => u.Id == teacher.Id);
+        Assert.False(teacherDto.IsActive);
+        Assert.Null(teacherDto.StudentGradeId);
+        Assert.Null(teacherDto.GradeName);
+    }
+
     private sealed class FakeUserRepository : IUserRepository
     {
         public List<AuthUser> Users { get; } = new();
@@ -629,6 +657,9 @@ public class AdminUserServiceTests
         public Task<StudentProfile?> GetStudentByUserIdAsync(Guid authUserId, CancellationToken ct = default)
             => Task.FromResult(StudentProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));
 
+        public Task<List<StudentProfile>> GetStudentsByUserIdsAsync(IEnumerable<Guid> authUserIds, CancellationToken ct = default)
+            => Task.FromResult(StudentProfiles.Where(p => authUserIds.Contains(p.AuthUserId)).ToList());
+
         public Task<TeacherProfile?> GetTeacherByUserIdAsync(Guid authUserId, CancellationToken ct = default)
             => Task.FromResult(TeacherProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));
 
@@ -680,6 +711,9 @@ public class AdminUserServiceTests
 
         public Task<Grade?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Grades.FirstOrDefault(g => g.Id == id));
+
+        public Task<List<Grade>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+            => Task.FromResult(Grades.Where(g => ids.Contains(g.Id)).ToList());
 
         public Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Grades.Any(g => g.Id == id));

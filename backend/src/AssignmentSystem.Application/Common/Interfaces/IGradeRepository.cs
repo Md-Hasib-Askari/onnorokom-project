@@ -6,6 +6,7 @@ public interface IGradeRepository
 {
     Task<List<Grade>> GetAllAsync(CancellationToken ct = default);
     Task<Grade?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<List<Grade>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
     Task<bool> ExistsAsync(Guid id, CancellationToken ct = default);
     Task<bool> ExistsAsync(string name, string academicYear, CancellationToken ct = default);
     Task<bool> HasSubjectsAsync(Guid id, CancellationToken ct = default);

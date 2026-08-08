@@ -19,6 +19,11 @@ public class GradeRepository(AppDbContext dbContext) : IGradeRepository
         return await dbContext.Grades.FirstOrDefaultAsync(g => g.Id == id, ct);
     }
 
+    public async Task<List<Grade>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+    {
+        return await dbContext.Grades.Where(g => ids.Contains(g.Id)).ToListAsync(ct);
+    }
+
     public async Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
     {
         return await dbContext.Grades.AnyAsync(g => g.Id == id, ct);

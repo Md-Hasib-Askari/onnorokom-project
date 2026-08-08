@@ -1,5 +1,4 @@
 using AssignmentSystem.Application.DTOs.Assignments;
-using AssignmentSystem.Application.DTOs.Auth;
 using AssignmentSystem.Application.DTOs.Grades;
 using AssignmentSystem.Application.DTOs.Subjects;
 using AssignmentSystem.Domain.Entities;
@@ -11,7 +10,6 @@ public class MappingProfile : Profile
 {
     public MappingProfile()
     {
-        CreateMap<AuthUser, UserListItemDto>();
         CreateMap<Grade, GradeDto>();
         CreateMap<Subject, SubjectDto>()
             .ForCtorParam(nameof(SubjectDto.TeacherName), o => o.MapFrom(s => s.Teacher != null ? s.Teacher.FullName : null));

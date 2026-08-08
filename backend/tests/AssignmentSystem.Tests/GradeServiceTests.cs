@@ -144,6 +144,9 @@ public class GradeServiceTests
         public Task<Grade?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Grades.FirstOrDefault(g => g.Id == id));
 
+        public Task<List<Grade>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+            => Task.FromResult(Grades.Where(g => ids.Contains(g.Id)).ToList());
+
         public Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Grades.Any(g => g.Id == id));
 

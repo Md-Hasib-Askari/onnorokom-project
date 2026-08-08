@@ -5,7 +5,6 @@ using AssignmentSystem.Application.DTOs.Admin;
 using AssignmentSystem.Application.DTOs.Auth;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
-using AutoMapper;
 
 namespace AssignmentSystem.Application.Services;
 
@@ -16,13 +15,40 @@ public class AdminUserService(
     IPasswordHasher passwordHasher,
     ITransactionService transactionService,
     ICurrentUser currentUser,
-    IProfileProvisioningService profileProvisioningService,
-    IMapper mapper) : IAdminUserService
+    IProfileProvisioningService profileProvisioningService) : IAdminUserService
 {
     public async Task<List<UserListItemDto>> GetAllUsersAsync(CancellationToken ct = default)
     {
         var users = await userRepository.GetAllAsync(ct);
-        return mapper.Map<List<UserListItemDto>>(users);
+        return await UserListItemDtoFactory.BuildAsync(users, profileRepository, gradeRepository, ct);
+    }
+
+    private async Task<UserListItemDto> BuildDtoAsync(AuthUser user, CancellationToken ct)
+    {
+        Guid? gradeId = null;
+        string? gradeName = null;
+
+        if (user.Role == UserRole.Student)
+        {
+            var studentProfile = await profileRepository.GetStudentByUserIdAsync(user.Id, ct);
+            if (studentProfile is not null)
+            {
+                gradeId = studentProfile.GradeId;
+                var grade = await gradeRepository.GetByIdAsync(studentProfile.GradeId, ct);
+                gradeName = grade?.Name;
+            }
+        }
+
+        return new UserListItemDto(
+            user.Id,
+            user.FullName,
+            user.Email,
+            user.Role,
+            user.Status,
+            user.CreatedAt,
+            user.IsActive,
+            gradeId,
+            gradeName);
     }
 
     public async Task<UserListItemDto> CreateUserAsync(UserCreateRequest request, CancellationToken ct = default)
@@ -44,7 +70,7 @@ public class AdminUserService(
             await profileProvisioningService.CreateProfileAsync(user, request.StudentGradeId, transactionCt);
         }, ct);
 
-        return mapper.Map<UserListItemDto>(user);
+        return await BuildDtoAsync(user, ct);
     }
 
     public async Task<UserListItemDto> UpdateUserAsync(Guid userId, UserUpdateRequest request, CancellationToken ct = default)
@@ -83,7 +109,7 @@ public class AdminUserService(
             await userRepository.UpdateAsync(user, transactionCt);
             await UpdateProfileAsync(user, request, transactionCt);
         }, ct);
-        return mapper.Map<UserListItemDto>(user);
+        return await BuildDtoAsync(user, ct);
     }
 
     public async Task DeleteUserAsync(Guid userId, CancellationToken ct = default)
