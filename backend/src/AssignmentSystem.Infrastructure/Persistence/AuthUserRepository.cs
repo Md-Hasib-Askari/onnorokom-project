@@ -20,7 +20,8 @@ public class AuthUserRepository(AppDbContext dbContext) : IUserRepository
 
     public async Task<AuthUser?> GetByRefreshTokenAsync(string refreshToken, CancellationToken ct = default)
     {
-        return await dbContext.AuthUsers.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken, ct);
+        return await dbContext.AuthUsers.FirstOrDefaultAsync(
+            u => u.RefreshToken == refreshToken || u.PreviousRefreshToken == refreshToken, ct);
     }
 
     public async Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default)

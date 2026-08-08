@@ -9,4 +9,5 @@ public class JwtSettings
     public string AccessTokenSecret { get; set; } = null!;
     public int AccessTokenExpirationMinutes { get; set; } = 15;
     public int RefreshTokenExpirationDays { get; set; } = 7;
+    public int RefreshTokenGraceWindowSeconds { get; set; } = 30;
 }

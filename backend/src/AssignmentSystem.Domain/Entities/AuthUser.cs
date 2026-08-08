@@ -13,6 +13,8 @@ public class AuthUser : BaseEntity
     public bool IsActive { get; private set; } = true;
     public string? RefreshToken { get; private set; }
     public DateTimeOffset? RefreshTokenExpiresAt { get; private set; }
+    public string? PreviousRefreshToken { get; private set; }
+    public DateTimeOffset? PreviousRefreshTokenGraceExpiresAt { get; private set; }
     public bool IsUsableAdmin => Role == UserRole.Admin && Status == AccountStatus.Approved && IsActive;
     public bool IsUsableTeacher => Role == UserRole.Teacher && Status == AccountStatus.Approved && IsActive;
 
@@ -76,11 +78,35 @@ public class AuthUser : BaseEntity
         Email = email.Trim().ToLowerInvariant();
     }
 
-    public void SetRefreshToken(string refreshToken, DateTimeOffset expiresAt)
+    public void SetRefreshToken(string refreshToken, DateTimeOffset expiresAt, DateTimeOffset graceExpiresAt)
     {
+        if (RefreshToken is not null)
+        {
+            PreviousRefreshToken = RefreshToken;
+            PreviousRefreshTokenGraceExpiresAt = graceExpiresAt;
+        }
+
         RefreshToken = refreshToken;
         RefreshTokenExpiresAt = expiresAt;
     }
+
+    public void RevokeRefreshToken()
+    {
+        RefreshToken = null;
+        RefreshTokenExpiresAt = null;
+        PreviousRefreshToken = null;
+        PreviousRefreshTokenGraceExpiresAt = null;
+    }
+
+    /// <summary>
+    /// True if <paramref name="token"/> is the immediately-prior refresh token and still within
+    /// its grace window, i.e. a request that raced the rotation rather than one presenting a
+    /// stale or stolen token.
+    /// </summary>
+    public bool IsPreviousRefreshToken(string token) =>
+        PreviousRefreshToken == token
+        && PreviousRefreshTokenGraceExpiresAt is { } graceExpiresAt
+        && graceExpiresAt > DateTimeOffset.UtcNow;
 
     public static AuthUser CreatePending(string fullName, string email, string passwordHash, UserRole role)
     {

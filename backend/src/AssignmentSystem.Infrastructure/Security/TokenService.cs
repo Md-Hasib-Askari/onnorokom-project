@@ -18,6 +18,8 @@ public class TokenService(IOptions<JwtSettings> options) : ITokenService
 
     public DateTimeOffset RefreshTokenExpiresAt => DateTimeOffset.UtcNow.AddDays(_settings.RefreshTokenExpirationDays);
 
+    public DateTimeOffset RefreshTokenGraceExpiresAt => DateTimeOffset.UtcNow.AddSeconds(_settings.RefreshTokenGraceWindowSeconds);
+
     public string CreateAccessToken(AuthUser user)
     {
         var claims = new List<Claim>

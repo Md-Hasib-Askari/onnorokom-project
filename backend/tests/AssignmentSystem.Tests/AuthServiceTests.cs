@@ -18,7 +18,7 @@ public class AuthServiceTests
 
     public AuthServiceTests()
     {
-        _sut = new AuthService(_repo, _grades, _hasher, _tokens, new FakeTransactionService(), new ProfileProvisioningService(_profiles), TestMappers.CreateMapper());
+        _sut = new AuthService(_repo, _grades, _profiles, _hasher, _tokens, new FakeTransactionService(), new ProfileProvisioningService(_profiles));
     }
 
     [Fact]
@@ -156,13 +156,42 @@ public class AuthServiceTests
     public async Task Refresh_ValidToken_RotatesTokens()
     {
         var user = CreateUser(email: "approved@test.com", status: AccountStatus.Approved);
-        user.SetRefreshToken("valid-refresh", DateTimeOffset.UtcNow.AddMinutes(5));
+        user.SetRefreshToken("valid-refresh", DateTimeOffset.UtcNow.AddMinutes(5), _tokens.RefreshTokenGraceExpiresAt);
         _repo.Users.Add(user);
 
         var response = await _sut.RefreshAsync("valid-refresh");
 
         Assert.Equal("refresh-token", response.RefreshToken);
         Assert.Equal("refresh-token", user.RefreshToken);
+    }
+
+    [Fact]
+    public async Task Refresh_RaceOnJustRotatedToken_ReturnsCurrentTokensInsteadOfThrowing()
+    {
+        var user = CreateUser(email: "approved@test.com", status: AccountStatus.Approved);
+        user.SetRefreshToken("original-refresh", DateTimeOffset.UtcNow.AddMinutes(5), _tokens.RefreshTokenGraceExpiresAt);
+        _repo.Users.Add(user);
+
+        // Winner of the race rotates the token first.
+        var winnerResponse = await _sut.RefreshAsync("original-refresh");
+        Assert.Equal("refresh-token", winnerResponse.RefreshToken);
+
+        // Loser presents the now-superseded token within the grace window instead of failing.
+        var loserResponse = await _sut.RefreshAsync("original-refresh");
+
+        Assert.Equal(user.RefreshToken, loserResponse.RefreshToken);
+        Assert.Equal("refresh-token", loserResponse.RefreshToken);
+    }
+
+    [Fact]
+    public async Task Refresh_TokenOutsideGraceWindow_ThrowsInvalidRefreshTokenException()
+    {
+        var user = CreateUser(email: "approved@test.com", status: AccountStatus.Approved);
+        user.SetRefreshToken("original-refresh", DateTimeOffset.UtcNow.AddMinutes(5), DateTimeOffset.UtcNow.AddMinutes(-1));
+        user.SetRefreshToken("rotated-refresh", DateTimeOffset.UtcNow.AddMinutes(5), DateTimeOffset.UtcNow.AddMinutes(-1));
+        _repo.Users.Add(user);
+
+        await Assert.ThrowsAsync<InvalidRefreshTokenException>(() => _sut.RefreshAsync("original-refresh"));
     }
 
     [Fact]
@@ -175,10 +204,29 @@ public class AuthServiceTests
     public async Task Refresh_ExpiredToken_ThrowsInvalidRefreshTokenException()
     {
         var user = CreateUser(email: "approved@test.com", status: AccountStatus.Approved);
-        user.SetRefreshToken("expired-refresh", DateTimeOffset.UtcNow.AddMinutes(-1));
+        user.SetRefreshToken("expired-refresh", DateTimeOffset.UtcNow.AddMinutes(-1), _tokens.RefreshTokenGraceExpiresAt);
         _repo.Users.Add(user);
 
         await Assert.ThrowsAsync<InvalidRefreshTokenException>(() => _sut.RefreshAsync("expired-refresh"));
+    }
+
+    [Fact]
+    public async Task Logout_ValidToken_RevokesRefreshToken()
+    {
+        var user = CreateUser(email: "approved@test.com", status: AccountStatus.Approved);
+        user.SetRefreshToken("valid-refresh", DateTimeOffset.UtcNow.AddMinutes(5), _tokens.RefreshTokenGraceExpiresAt);
+        _repo.Users.Add(user);
+
+        await _sut.LogoutAsync("valid-refresh");
+
+        Assert.Null(user.RefreshToken);
+        Assert.Null(user.RefreshTokenExpiresAt);
+    }
+
+    [Fact]
+    public async Task Logout_UnknownToken_DoesNotThrow()
+    {
+        await _sut.LogoutAsync("unknown-token");
     }
 
     [Fact]
@@ -201,6 +249,17 @@ public class AuthServiceTests
         var result = await _sut.ApproveAsync(user.Id, false);
 
         Assert.Equal(AccountStatus.Rejected, result.Status);
+    }
+
+    [Fact]
+    public async Task Approve_RejectedUser_SetsStatusApproved()
+    {
+        var user = CreateUser(email: "rejected@test.com", status: AccountStatus.Rejected);
+        _repo.Users.Add(user);
+
+        var result = await _sut.ApproveAsync(user.Id, true);
+
+        Assert.Equal(AccountStatus.Approved, result.Status);
     }
 
     [Fact]
@@ -265,6 +324,22 @@ public class AuthServiceTests
         Assert.All(pending, u => Assert.Equal(AccountStatus.Pending, u.Status));
     }
 
+    [Fact]
+    public async Task GetPendingUsers_IncludesGradeInfoForPendingStudents()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        _grades.Grades.Add(grade);
+        var student = CreateUser(email: "pending-student@test.com", status: AccountStatus.Pending);
+        _repo.Users.Add(student);
+        _profiles.StudentProfiles.Add(StudentProfile.Create(student.Id, grade.Id));
+
+        var pending = await _sut.GetPendingUsersAsync();
+
+        var dto = Assert.Single(pending);
+        Assert.Equal(grade.Id, dto.StudentGradeId);
+        Assert.Equal(grade.Name, dto.GradeName);
+    }
+
     private static AuthUser CreateUser(string email, AccountStatus status = AccountStatus.Pending, string password = "secret123")
     {
         var user = AuthUser.CreatePending("Test User", email, $"HASH:{password}", UserRole.Student);
@@ -292,7 +367,8 @@ public class AuthServiceTests
             => Task.FromResult(Users.FirstOrDefault(u => u.Email == email));
 
         public Task<AuthUser?> GetByRefreshTokenAsync(string refreshToken, CancellationToken ct = default)
-            => Task.FromResult(Users.FirstOrDefault(u => u.RefreshToken == refreshToken));
+            => Task.FromResult(Users.FirstOrDefault(u =>
+                u.RefreshToken == refreshToken || u.PreviousRefreshToken == refreshToken));
 
         public Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default)
             => Task.FromResult(Users.Any(u => u.Email == email));
@@ -433,11 +509,18 @@ public class AuthServiceTests
 
     private sealed class FakeTokenService : ITokenService
     {
+        private int _refreshTokensIssued;
+
         public DateTimeOffset AccessTokenExpiresAt { get; } = DateTimeOffset.UtcNow.AddMinutes(15);
         public DateTimeOffset RefreshTokenExpiresAt { get; } = DateTimeOffset.UtcNow.AddDays(7);
+        public DateTimeOffset RefreshTokenGraceExpiresAt { get; } = DateTimeOffset.UtcNow.AddSeconds(30);
 
         public string CreateAccessToken(AuthUser user) => "access-token";
 
-        public string CreateRefreshToken() => "refresh-token";
+        public string CreateRefreshToken()
+        {
+            _refreshTokensIssued++;
+            return _refreshTokensIssued == 1 ? "refresh-token" : $"refresh-token-{_refreshTokensIssued}";
+        }
     }
 }

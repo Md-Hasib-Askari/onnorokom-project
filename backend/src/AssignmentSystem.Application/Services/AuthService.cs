@@ -4,18 +4,17 @@ using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.DTOs.Auth;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
-using AutoMapper;
 
 namespace AssignmentSystem.Application.Services;
 
 public class AuthService(
     IUserRepository userRepository,
     IGradeRepository gradeRepository,
+    IProfileRepository profileRepository,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
     ITransactionService transactionService,
-    IProfileProvisioningService profileProvisioningService,
-    IMapper mapper) : IAuthService
+    IProfileProvisioningService profileProvisioningService) : IAuthService
 {
     public async Task<AuthUser> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
@@ -56,7 +55,18 @@ public class AuthService(
     {
         var user = await userRepository.GetByRefreshTokenAsync(refreshToken, ct);
 
-        if (user is null
+        if (user is null)
+        {
+            throw new InvalidRefreshTokenException();
+        }
+
+        if (user.IsPreviousRefreshToken(refreshToken))
+        {
+            EnsureUsable(user);
+            return BuildResponse(user, tokenService.CreateAccessToken(user), user.RefreshToken!);
+        }
+
+        if (user.RefreshToken != refreshToken
             || user.RefreshTokenExpiresAt is null
             || user.RefreshTokenExpiresAt <= DateTimeOffset.UtcNow)
         {
@@ -67,6 +77,18 @@ public class AuthService(
         return await IssueTokensAsync(user, ct);
     }
 
+    public async Task LogoutAsync(string refreshToken, CancellationToken ct = default)
+    {
+        var user = await userRepository.GetByRefreshTokenAsync(refreshToken, ct);
+        if (user is null)
+        {
+            return;
+        }
+
+        user.RevokeRefreshToken();
+        await userRepository.UpdateAsync(user, ct);
+    }
+
     public async Task<AuthUser> ApproveAsync(Guid userId, bool approve, CancellationToken ct = default)
     {
         var user = await userRepository.GetByIdAsync(userId, ct)
@@ -74,9 +96,9 @@ public class AuthService(
 
         if (approve)
         {
-            if (user.Status != AccountStatus.Pending)
+            if (user.Status == AccountStatus.Approved)
             {
-                throw new DomainException("Only pending users can be approved.");
+                throw new DomainException("User is already approved.");
             }
 
             user.Approve();
@@ -99,7 +121,7 @@ public class AuthService(
     public async Task<List<UserListItemDto>> GetPendingUsersAsync(CancellationToken ct = default)
     {
         var users = await userRepository.GetByStatusAsync(AccountStatus.Pending, ct);
-        return mapper.Map<List<UserListItemDto>>(users);
+        return await UserListItemDtoFactory.BuildAsync(users, profileRepository, gradeRepository, ct);
     }
 
     private void EnsureUsable(AuthUser user)
@@ -122,10 +144,14 @@ public class AuthService(
     {
         var accessToken = tokenService.CreateAccessToken(user);
         var refreshToken = tokenService.CreateRefreshToken();
-        user.SetRefreshToken(refreshToken, tokenService.RefreshTokenExpiresAt);
+        user.SetRefreshToken(refreshToken, tokenService.RefreshTokenExpiresAt, tokenService.RefreshTokenGraceExpiresAt);
         await userRepository.UpdateAsync(user, ct);
 
-        return new AuthResponse(
+        return BuildResponse(user, accessToken, refreshToken);
+    }
+
+    private AuthResponse BuildResponse(AuthUser user, string accessToken, string refreshToken) =>
+        new(
             accessToken,
             refreshToken,
             tokenService.AccessTokenExpiresAt,
@@ -134,5 +160,4 @@ public class AuthService(
             user.Email,
             user.Role,
             user.Status);
-    }
 }

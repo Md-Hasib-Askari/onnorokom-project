@@ -55,4 +55,18 @@ public class AuthController(
         var response = await authService.RefreshAsync(request.RefreshToken, ct);
         return Ok(response);
     }
+
+    [HttpPost("logout")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request, CancellationToken ct)
+    {
+        var validation = await refreshTokenValidator.ValidateAsync(request, ct);
+        if (!validation.IsValid)
+        {
+            throw new ValidationException(validation.Errors);
+        }
+
+        await authService.LogoutAsync(request.RefreshToken, ct);
+        return NoContent();
+    }
 }
