@@ -35,7 +35,7 @@ public class AdminGradeController(
         return Ok(grade);
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] GradeUpdateRequest request, CancellationToken ct)
     {
         var validation = await updateValidator.ValidateAsync(request, ct);
@@ -48,7 +48,7 @@ public class AdminGradeController(
         return Ok(grade);
     }
 
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await gradeService.DeleteAsync(id, ct);

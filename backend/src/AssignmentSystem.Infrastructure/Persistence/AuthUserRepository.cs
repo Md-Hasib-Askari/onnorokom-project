@@ -1,3 +1,4 @@
+using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
@@ -62,15 +63,33 @@ public class AuthUserRepository(AppDbContext dbContext) : IUserRepository
         return await dbContext.Submissions.AnyAsync(s => s.GradedByTeacherId == userId, ct);
     }
 
+    public Task<int> CountUsableAdminsAsync(CancellationToken ct = default)
+    {
+        return dbContext.AuthUsers.CountAsync(
+            u => u.Role == UserRole.Admin && u.Status == AccountStatus.Approved && u.IsActive, ct);
+    }
+
     public async Task AddAsync(AuthUser user, CancellationToken ct = default)
     {
         dbContext.AuthUsers.Add(user);
-        await dbContext.SaveChangesAsync(ct);
+        await SaveAsync(user.Email, ct);
     }
 
     public async Task UpdateAsync(AuthUser user, CancellationToken ct = default)
     {
         dbContext.AuthUsers.Update(user);
-        await dbContext.SaveChangesAsync(ct);
+        await SaveAsync(user.Email, ct);
+    }
+
+    private async Task SaveAsync(string email, CancellationToken ct)
+    {
+        try
+        {
+            await dbContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
+        {
+            throw new DuplicateEmailException(email);
+        }
     }
 }

@@ -1,3 +1,4 @@
+using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -41,12 +42,24 @@ public class GradeRepository(AppDbContext dbContext) : IGradeRepository
     public async Task AddAsync(Grade grade, CancellationToken ct = default)
     {
         dbContext.Grades.Add(grade);
-        await dbContext.SaveChangesAsync(ct);
+        await SaveAsync(grade.Name, grade.AcademicYear, ct);
     }
 
     public async Task UpdateAsync(Grade grade, CancellationToken ct = default)
     {
         dbContext.Grades.Update(grade);
-        await dbContext.SaveChangesAsync(ct);
+        await SaveAsync(grade.Name, grade.AcademicYear, ct);
+    }
+
+    private async Task SaveAsync(string name, string academicYear, CancellationToken ct)
+    {
+        try
+        {
+            await dbContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
+        {
+            throw new DuplicateEntityException($"Grade '{name}' for academic year {academicYear} already exists.");
+        }
     }
 }
