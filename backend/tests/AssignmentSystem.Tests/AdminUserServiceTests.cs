@@ -13,11 +13,12 @@ public class AdminUserServiceTests
     private readonly FakeProfileRepository _profiles = new();
     private readonly FakeGradeRepository _grades = new();
     private readonly FakePasswordHasher _hasher = new();
+    private readonly FakeCurrentUser _currentUser = new();
     private readonly AdminUserService _sut;
 
     public AdminUserServiceTests()
     {
-        _sut = new AdminUserService(_users, _profiles, _grades, _hasher, TestMappers.CreateMapper());
+        _sut = new AdminUserService(_users, _profiles, _grades, _hasher, new FakeTransactionService(), _currentUser, new ProfileProvisioningService(_profiles), TestMappers.CreateMapper());
     }
 
     [Fact]
@@ -58,12 +59,14 @@ public class AdminUserServiceTests
     }
 
     [Fact]
-    public async Task Create_Admin_NoProfileCreated()
+    public async Task Create_Admin_CreatesAdminProfile()
     {
-        await _sut.CreateUserAsync(new("Admin Two", "admin2@test.com", "Secret@123", UserRole.Admin));
+        var dto = await _sut.CreateUserAsync(new("Admin Two", "admin2@test.com", "Secret@123", UserRole.Admin));
 
         Assert.Empty(_profiles.TeacherProfiles);
         Assert.Empty(_profiles.StudentProfiles);
+        var profile = Assert.Single(_profiles.AdminProfiles);
+        Assert.Equal(dto.Id, profile.AuthUserId);
     }
 
     [Fact]
@@ -96,14 +99,27 @@ public class AdminUserServiceTests
         user.Approve();
         _users.Users.Add(user);
 
-        var dto = await _sut.UpdateUserAsync(user.Id, new("New Name", "new@test.com", AccountStatus.Approved, false, grade.Id));
+        var dto = await _sut.UpdateUserAsync(user.Id, new("New Name", "new@test.com", AccountStatus.Approved, true, grade.Id));
 
         Assert.Equal("New Name", user.FullName);
         Assert.Equal("new@test.com", user.Email);
         Assert.Equal(UserRole.Student, user.Role);
         Assert.Equal(AccountStatus.Approved, user.Status);
-        Assert.False(user.IsActive);
+        Assert.True(user.IsActive);
         Assert.Equal(user.Id, dto.Id);
+    }
+
+    [Fact]
+    public async Task Update_RejectedAlwaysDeactivates()
+    {
+        var user = AuthUser.CreatePending("Name", "r@test.com", "hash", UserRole.Teacher);
+        user.Approve();
+        _users.Users.Add(user);
+
+        await _sut.UpdateUserAsync(user.Id, new("Name", "r@test.com", AccountStatus.Rejected, true));
+
+        Assert.Equal(AccountStatus.Rejected, user.Status);
+        Assert.False(user.IsActive);
     }
 
     [Fact]
@@ -118,6 +134,83 @@ public class AdminUserServiceTests
         await _sut.UpdateUserAsync(user.Id, new("Name", "a@test.com", AccountStatus.Rejected, true, grade.Id));
 
         Assert.Equal(AccountStatus.Rejected, user.Status);
+    }
+
+    [Fact]
+    public async Task Update_LastUsableAdmin_RejectedThrowsDomainException()
+    {
+        var admin = AuthUser.CreatePending("Admin", "admin@test.com", "hash", UserRole.Admin);
+        admin.Approve();
+        _users.Users.Add(admin);
+
+        await Assert.ThrowsAsync<DomainException>(
+            () => _sut.UpdateUserAsync(admin.Id, new("Admin", "admin@test.com", AccountStatus.Rejected, true)));
+
+        Assert.Equal(AccountStatus.Approved, admin.Status);
+        Assert.True(admin.IsActive);
+    }
+
+    [Fact]
+    public async Task Update_LastUsableAdmin_DeactivatedThrowsDomainException()
+    {
+        var admin = AuthUser.CreatePending("Admin", "admin@test.com", "hash", UserRole.Admin);
+        admin.Approve();
+        _users.Users.Add(admin);
+
+        await Assert.ThrowsAsync<DomainException>(
+            () => _sut.UpdateUserAsync(admin.Id, new("Admin", "admin@test.com", AccountStatus.Approved, false)));
+
+        Assert.Equal(AccountStatus.Approved, admin.Status);
+        Assert.True(admin.IsActive);
+    }
+
+    [Fact]
+    public async Task Update_NonLastAdmin_CanBeRejected()
+    {
+        var admin = AuthUser.CreatePending("Admin", "admin@test.com", "hash", UserRole.Admin);
+        admin.Approve();
+        var other = AuthUser.CreatePending("Admin Two", "admin2@test.com", "hash", UserRole.Admin);
+        other.Approve();
+        _users.Users.Add(admin);
+        _users.Users.Add(other);
+
+        await _sut.UpdateUserAsync(admin.Id, new("Admin", "admin@test.com", AccountStatus.Rejected, true));
+
+        Assert.Equal(AccountStatus.Rejected, admin.Status);
+        Assert.False(admin.IsActive);
+    }
+
+    [Fact]
+    public async Task Update_NonLastAdmin_CanBeDeactivated()
+    {
+        var admin = AuthUser.CreatePending("Admin", "admin@test.com", "hash", UserRole.Admin);
+        admin.Approve();
+        var other = AuthUser.CreatePending("Admin Two", "admin2@test.com", "hash", UserRole.Admin);
+        other.Approve();
+        _users.Users.Add(admin);
+        _users.Users.Add(other);
+
+        await _sut.UpdateUserAsync(admin.Id, new("Admin", "admin@test.com", AccountStatus.Approved, false));
+
+        Assert.Equal(AccountStatus.Approved, admin.Status);
+        Assert.False(admin.IsActive);
+    }
+
+    [Fact]
+    public async Task Update_AlreadyUnusableAdmin_UnaffectedByLastAdminGuard()
+    {
+        var usableAdmin = AuthUser.CreatePending("Admin", "admin@test.com", "hash", UserRole.Admin);
+        usableAdmin.Approve();
+        var rejectedAdmin = AuthUser.CreatePending("Admin Two", "admin2@test.com", "hash", UserRole.Admin);
+        rejectedAdmin.Approve();
+        rejectedAdmin.Reject();
+        _users.Users.Add(usableAdmin);
+        _users.Users.Add(rejectedAdmin);
+
+        await _sut.UpdateUserAsync(rejectedAdmin.Id, new("Admin Two", "admin2@test.com", AccountStatus.Rejected, false));
+
+        Assert.Equal(AccountStatus.Rejected, rejectedAdmin.Status);
+        Assert.False(rejectedAdmin.IsActive);
     }
 
     [Fact]
@@ -198,6 +291,123 @@ public class AdminUserServiceTests
     }
 
     [Fact]
+    public async Task Update_TeacherWithProfile_CreatesTeacherProfile()
+    {
+        var user = AuthUser.CreatePending("Teacher", "t@test.com", "hash", UserRole.Teacher);
+        user.Approve();
+        _users.Users.Add(user);
+        var dateOfJoining = new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+        await _sut.UpdateUserAsync(user.Id, new("Teacher", "t@test.com", AccountStatus.Approved, true,
+            TeacherProfile: new TeacherProfileUpdateRequest("Science", "Senior Teacher", "MSc", "0170000000", "Dhaka", dateOfJoining)));
+
+        var profile = Assert.Single(_profiles.TeacherProfiles);
+        Assert.Equal(user.Id, profile.AuthUserId);
+        Assert.Equal("Science", profile.Department);
+        Assert.Equal("Senior Teacher", profile.Designation);
+        Assert.Equal("MSc", profile.Qualification);
+        Assert.Equal("0170000000", profile.PhoneNumber);
+        Assert.Equal("Dhaka", profile.Address);
+        Assert.Equal(dateOfJoining, profile.DateOfJoining);
+    }
+
+    [Fact]
+    public async Task Update_TeacherProfileChange_UpdatesExistingProfile()
+    {
+        var user = AuthUser.CreatePending("Teacher", "t@test.com", "hash", UserRole.Teacher);
+        user.Approve();
+        _users.Users.Add(user);
+        var profile = TeacherProfile.Create(user.Id);
+        profile.UpdateDetails("Old Dept", "Old Title", "Old Qual", "Old Phone", "Old Address", null);
+        _profiles.TeacherProfiles.Add(profile);
+
+        await _sut.UpdateUserAsync(user.Id, new("Teacher", "t@test.com", AccountStatus.Approved, true,
+            TeacherProfile: new TeacherProfileUpdateRequest("New Dept", "New Title", "New Qual", "New Phone", "New Address", null)));
+
+        Assert.Single(_profiles.TeacherProfiles);
+        Assert.Equal("New Dept", profile.Department);
+        Assert.Equal("New Title", profile.Designation);
+        Assert.Equal("New Qual", profile.Qualification);
+        Assert.Equal("New Phone", profile.PhoneNumber);
+        Assert.Equal("New Address", profile.Address);
+    }
+
+    [Fact]
+    public async Task Update_TeacherWithoutProfileInRequest_LeavesProfileUnchanged()
+    {
+        var user = AuthUser.CreatePending("Teacher", "t@test.com", "hash", UserRole.Teacher);
+        user.Approve();
+        _users.Users.Add(user);
+        var profile = TeacherProfile.Create(user.Id);
+        profile.UpdateDetails("Dept", "Title", "Qual", "Phone", "Address", null);
+        _profiles.TeacherProfiles.Add(profile);
+
+        await _sut.UpdateUserAsync(user.Id, new("Teacher", "t@test.com", AccountStatus.Approved, true));
+
+        Assert.Single(_profiles.TeacherProfiles);
+        Assert.Equal("Dept", profile.Department);
+    }
+
+    [Fact]
+    public async Task Update_AdminWithProfile_CreatesAdminProfile()
+    {
+        var admin = AuthUser.CreatePending("Admin", "admin@test.com", "hash", UserRole.Admin);
+        admin.Approve();
+        var other = AuthUser.CreatePending("Admin Two", "admin2@test.com", "hash", UserRole.Admin);
+        other.Approve();
+        _users.Users.Add(admin);
+        _users.Users.Add(other);
+
+        await _sut.UpdateUserAsync(admin.Id, new("Admin", "admin@test.com", AccountStatus.Approved, true,
+            AdminProfile: new AdminProfileUpdateRequest("Principal", "0180000000")));
+
+        var profile = Assert.Single(_profiles.AdminProfiles);
+        Assert.Equal(admin.Id, profile.AuthUserId);
+        Assert.Equal("Principal", profile.Position);
+        Assert.Equal("0180000000", profile.PhoneNumber);
+    }
+
+    [Fact]
+    public async Task Update_AdminProfileChange_UpdatesExistingProfile()
+    {
+        var admin = AuthUser.CreatePending("Admin", "admin@test.com", "hash", UserRole.Admin);
+        admin.Approve();
+        var other = AuthUser.CreatePending("Admin Two", "admin2@test.com", "hash", UserRole.Admin);
+        other.Approve();
+        _users.Users.Add(admin);
+        _users.Users.Add(other);
+        var profile = AdminProfile.Create(admin.Id);
+        profile.UpdateDetails("Old Position", "Old Phone");
+        _profiles.AdminProfiles.Add(profile);
+
+        await _sut.UpdateUserAsync(admin.Id, new("Admin", "admin@test.com", AccountStatus.Approved, true,
+            AdminProfile: new AdminProfileUpdateRequest("New Position", "New Phone")));
+
+        Assert.Single(_profiles.AdminProfiles);
+        Assert.Equal("New Position", profile.Position);
+        Assert.Equal("New Phone", profile.PhoneNumber);
+    }
+
+    [Fact]
+    public async Task Update_AdminWithoutProfileInRequest_LeavesProfileUnchanged()
+    {
+        var admin = AuthUser.CreatePending("Admin", "admin@test.com", "hash", UserRole.Admin);
+        admin.Approve();
+        var other = AuthUser.CreatePending("Admin Two", "admin2@test.com", "hash", UserRole.Admin);
+        other.Approve();
+        _users.Users.Add(admin);
+        _users.Users.Add(other);
+        var profile = AdminProfile.Create(admin.Id);
+        profile.UpdateDetails("Position", "Phone");
+        _profiles.AdminProfiles.Add(profile);
+
+        await _sut.UpdateUserAsync(admin.Id, new("Admin", "admin@test.com", AccountStatus.Approved, true));
+
+        Assert.Single(_profiles.AdminProfiles);
+        Assert.Equal("Position", profile.Position);
+    }
+
+    [Fact]
     public async Task Update_DuplicateEmail_ThrowsDuplicateEmailException()
     {
         var other = AuthUser.CreatePending("Other", "taken@test.com", "hash", UserRole.Student);
@@ -228,6 +438,23 @@ public class AdminUserServiceTests
         await _sut.DeleteUserAsync(user.Id);
 
         Assert.True(user.IsDeleted);
+    }
+
+    [Fact]
+    public async Task Delete_SoftDeletesUserProfile()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        _grades.Grades.Add(grade);
+        var user = AuthUser.CreatePending("Student", "s@test.com", "hash", UserRole.Student);
+        user.Approve();
+        _users.Users.Add(user);
+        var profile = StudentProfile.Create(user.Id, grade.Id);
+        _profiles.StudentProfiles.Add(profile);
+
+        await _sut.DeleteUserAsync(user.Id);
+
+        Assert.True(user.IsDeleted);
+        Assert.True(profile.IsDeleted);
     }
 
     [Fact]
@@ -289,6 +516,49 @@ public class AdminUserServiceTests
     }
 
     [Fact]
+    public async Task Delete_OwnAccount_ThrowsDomainException()
+    {
+        var admin = AuthUser.CreatePending("Admin", "admin@test.com", "hash", UserRole.Admin);
+        admin.Approve();
+        _users.Users.Add(admin);
+        _currentUser.UserId = admin.Id.ToString();
+
+        await Assert.ThrowsAsync<DomainException>(() => _sut.DeleteUserAsync(admin.Id));
+
+        Assert.False(admin.IsDeleted);
+    }
+
+    [Fact]
+    public async Task Delete_LastAdmin_ThrowsDomainException()
+    {
+        var admin = AuthUser.CreatePending("Admin", "admin@test.com", "hash", UserRole.Admin);
+        admin.Approve();
+        _users.Users.Add(admin);
+        _currentUser.UserId = Guid.NewGuid().ToString();
+
+        await Assert.ThrowsAsync<DomainException>(() => _sut.DeleteUserAsync(admin.Id));
+
+        Assert.False(admin.IsDeleted);
+    }
+
+    [Fact]
+    public async Task Delete_NonLastAdmin_Deletes()
+    {
+        var admin = AuthUser.CreatePending("Admin", "admin@test.com", "hash", UserRole.Admin);
+        admin.Approve();
+        var other = AuthUser.CreatePending("Admin Two", "admin2@test.com", "hash", UserRole.Admin);
+        other.Approve();
+        _users.Users.Add(admin);
+        _users.Users.Add(other);
+        _currentUser.UserId = Guid.NewGuid().ToString();
+
+        await _sut.DeleteUserAsync(admin.Id);
+
+        Assert.True(admin.IsDeleted);
+        Assert.False(other.IsDeleted);
+    }
+
+    [Fact]
     public async Task GetAllUsers_ReturnsAllUsers()
     {
         _users.Users.Add(AuthUser.CreatePending("One", "one@test.com", "hash", UserRole.Student));
@@ -337,6 +607,9 @@ public class AdminUserServiceTests
         public Task<bool> HasGradedSubmissionsAsync(Guid userId, CancellationToken ct = default)
             => Task.FromResult(GradedSubmissionUserIds.Contains(userId));
 
+        public Task<int> CountUsableAdminsAsync(CancellationToken ct = default)
+            => Task.FromResult(Users.Count(u => u.Role == UserRole.Admin && u.Status == AccountStatus.Approved && u.IsActive));
+
         public Task AddAsync(AuthUser user, CancellationToken ct = default)
         {
             Users.Add(user);
@@ -351,9 +624,16 @@ public class AdminUserServiceTests
     {
         public List<TeacherProfile> TeacherProfiles { get; } = new();
         public List<StudentProfile> StudentProfiles { get; } = new();
+        public List<AdminProfile> AdminProfiles { get; } = new();
 
         public Task<StudentProfile?> GetStudentByUserIdAsync(Guid authUserId, CancellationToken ct = default)
             => Task.FromResult(StudentProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));
+
+        public Task<TeacherProfile?> GetTeacherByUserIdAsync(Guid authUserId, CancellationToken ct = default)
+            => Task.FromResult(TeacherProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));
+
+        public Task<AdminProfile?> GetAdminByUserIdAsync(Guid authUserId, CancellationToken ct = default)
+            => Task.FromResult(AdminProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));
 
         public Task AddAsync(TeacherProfile profile, CancellationToken ct = default)
         {
@@ -367,8 +647,28 @@ public class AdminUserServiceTests
             return Task.CompletedTask;
         }
 
+        public Task AddAsync(AdminProfile profile, CancellationToken ct = default)
+        {
+            AdminProfiles.Add(profile);
+            return Task.CompletedTask;
+        }
+
         public Task UpdateAsync(StudentProfile profile, CancellationToken ct = default)
             => Task.CompletedTask;
+
+        public Task UpdateAsync(TeacherProfile profile, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task UpdateAsync(AdminProfile profile, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task SoftDeleteForUserAsync(Guid authUserId, CancellationToken ct = default)
+        {
+            TeacherProfiles.FirstOrDefault(p => p.AuthUserId == authUserId)?.Delete();
+            StudentProfiles.FirstOrDefault(p => p.AuthUserId == authUserId)?.Delete();
+            AdminProfiles.FirstOrDefault(p => p.AuthUserId == authUserId)?.Delete();
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeGradeRepository : IGradeRepository
@@ -409,5 +709,16 @@ public class AdminUserServiceTests
 
         public bool Verify(string password, string hashedPassword)
             => $"HASH:{password}" == hashedPassword;
+    }
+
+    private sealed class FakeTransactionService : ITransactionService
+    {
+        public Task ExecuteAsync(Func<CancellationToken, Task> work, CancellationToken ct = default)
+            => work(ct);
+    }
+
+    private sealed class FakeCurrentUser : ICurrentUser
+    {
+        public string? UserId { get; set; }
     }
 }

@@ -13,6 +13,7 @@ public static class DependencyInjection
     {
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
         services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
+        services.AddScoped<IProfileProvisioningService, ProfileProvisioningService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddScoped<IGradeService, GradeService>();

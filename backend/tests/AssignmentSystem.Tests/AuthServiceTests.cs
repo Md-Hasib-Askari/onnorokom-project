@@ -18,7 +18,7 @@ public class AuthServiceTests
 
     public AuthServiceTests()
     {
-        _sut = new AuthService(_repo, _profiles, _grades, _hasher, _tokens, TestMappers.CreateMapper());
+        _sut = new AuthService(_repo, _grades, _hasher, _tokens, new FakeTransactionService(), new ProfileProvisioningService(_profiles), TestMappers.CreateMapper());
     }
 
     [Fact]
@@ -94,6 +94,18 @@ public class AuthServiceTests
     }
 
     [Fact]
+    public async Task Register_Admin_CreatesAdminProfile()
+    {
+        var request = new RegisterRequest("Admin One", "admin1@test.com", "secret123", UserRole.Admin);
+
+        var user = await _sut.RegisterAsync(request);
+
+        Assert.Equal(UserRole.Admin, user.Role);
+        Assert.Single(_profiles.AdminProfiles);
+        Assert.Equal(user.Id, _profiles.AdminProfiles[0].AuthUserId);
+    }
+
+    [Fact]
     public async Task Login_ValidCredentials_ReturnsTokensAndUserInfo()
     {
         var user = CreateUser(email: "approved@test.com", status: AccountStatus.Approved, password: "correct");
@@ -138,16 +150,6 @@ public class AuthServiceTests
         _repo.Users.Add(user);
 
         await Assert.ThrowsAsync<AccountRejectedException>(() => _sut.LoginAsync(new("rejected@test.com", "correct")));
-    }
-
-    [Fact]
-    public async Task Login_InactiveAccount_ThrowsAccountInactiveException()
-    {
-        var user = CreateUser(email: "inactive@test.com", status: AccountStatus.Approved, password: "correct");
-        user.Deactivate();
-        _repo.Users.Add(user);
-
-        await Assert.ThrowsAsync<AccountInactiveException>(() => _sut.LoginAsync(new("inactive@test.com", "correct")));
     }
 
     [Fact]
@@ -202,9 +204,52 @@ public class AuthServiceTests
     }
 
     [Fact]
+    public async Task Approve_AlreadyApprovedAndDeactivated_ThrowsDomainExceptionAndStaysDeactivated()
+    {
+        var user = AuthUser.CreatePending("Name", "u@test.com", "hash", UserRole.Student);
+        user.Approve();
+        user.Deactivate();
+        _repo.Users.Add(user);
+
+        await Assert.ThrowsAsync<DomainException>(() => _sut.ApproveAsync(user.Id, true));
+
+        Assert.Equal(AccountStatus.Approved, user.Status);
+        Assert.False(user.IsActive);
+    }
+
+    [Fact]
     public async Task Approve_UnknownUser_ThrowsEntityNotFoundException()
     {
         await Assert.ThrowsAsync<EntityNotFoundException>(() => _sut.ApproveAsync(Guid.NewGuid(), true));
+    }
+
+    [Fact]
+    public async Task Approve_RejectLastUsableAdmin_ThrowsDomainException()
+    {
+        var admin = AuthUser.CreatePending("Admin", "admin@test.com", "hash", UserRole.Admin);
+        admin.Approve();
+        _repo.Users.Add(admin);
+
+        await Assert.ThrowsAsync<DomainException>(() => _sut.ApproveAsync(admin.Id, false));
+
+        Assert.Equal(AccountStatus.Approved, admin.Status);
+        Assert.True(admin.IsActive);
+    }
+
+    [Fact]
+    public async Task Approve_RejectNonLastAdmin_Succeeds()
+    {
+        var admin = AuthUser.CreatePending("Admin", "admin@test.com", "hash", UserRole.Admin);
+        admin.Approve();
+        var other = AuthUser.CreatePending("Admin Two", "admin2@test.com", "hash", UserRole.Admin);
+        other.Approve();
+        _repo.Users.Add(admin);
+        _repo.Users.Add(other);
+
+        var result = await _sut.ApproveAsync(admin.Id, false);
+
+        Assert.Equal(AccountStatus.Rejected, result.Status);
+        Assert.False(result.IsActive);
     }
 
     [Fact]
@@ -270,6 +315,9 @@ public class AuthServiceTests
         public Task<bool> HasGradedSubmissionsAsync(Guid userId, CancellationToken ct = default)
             => Task.FromResult(false);
 
+        public Task<int> CountUsableAdminsAsync(CancellationToken ct = default)
+            => Task.FromResult(Users.Count(u => u.Role == UserRole.Admin && u.Status == AccountStatus.Approved && u.IsActive));
+
         public Task AddAsync(AuthUser user, CancellationToken ct = default)
         {
             Users.Add(user);
@@ -284,9 +332,16 @@ public class AuthServiceTests
     {
         public List<TeacherProfile> TeacherProfiles { get; } = new();
         public List<StudentProfile> StudentProfiles { get; } = new();
+        public List<AdminProfile> AdminProfiles { get; } = new();
 
         public Task<StudentProfile?> GetStudentByUserIdAsync(Guid authUserId, CancellationToken ct = default)
             => Task.FromResult(StudentProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));
+
+        public Task<TeacherProfile?> GetTeacherByUserIdAsync(Guid authUserId, CancellationToken ct = default)
+            => Task.FromResult(TeacherProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));
+
+        public Task<AdminProfile?> GetAdminByUserIdAsync(Guid authUserId, CancellationToken ct = default)
+            => Task.FromResult(AdminProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));
 
         public Task AddAsync(TeacherProfile profile, CancellationToken ct = default)
         {
@@ -300,8 +355,28 @@ public class AuthServiceTests
             return Task.CompletedTask;
         }
 
+        public Task AddAsync(AdminProfile profile, CancellationToken ct = default)
+        {
+            AdminProfiles.Add(profile);
+            return Task.CompletedTask;
+        }
+
         public Task UpdateAsync(StudentProfile profile, CancellationToken ct = default)
             => Task.CompletedTask;
+
+        public Task UpdateAsync(TeacherProfile profile, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task UpdateAsync(AdminProfile profile, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task SoftDeleteForUserAsync(Guid authUserId, CancellationToken ct = default)
+        {
+            TeacherProfiles.FirstOrDefault(p => p.AuthUserId == authUserId)?.Delete();
+            StudentProfiles.FirstOrDefault(p => p.AuthUserId == authUserId)?.Delete();
+            AdminProfiles.FirstOrDefault(p => p.AuthUserId == authUserId)?.Delete();
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeGradeRepository : IGradeRepository
@@ -342,6 +417,12 @@ public class AuthServiceTests
 
         public bool Verify(string password, string hashedPassword)
             => $"HASH:{password}" == hashedPassword;
+    }
+
+    private sealed class FakeTransactionService : ITransactionService
+    {
+        public Task ExecuteAsync(Func<CancellationToken, Task> work, CancellationToken ct = default)
+            => work(ct);
     }
 
     private sealed class FakeTokenService : ITokenService

@@ -21,21 +21,23 @@ public class AuthUser : BaseEntity
     public void Approve()
     {
         Status = AccountStatus.Approved;
+        IsActive = true;
     }
 
     public void Reject()
     {
         Status = AccountStatus.Rejected;
+        IsActive = false;
+    }
+
+    public void Activate()
+    {
+        IsActive = true;
     }
 
     public void Deactivate()
     {
         IsActive = false;
-    }
-
-    public void Reactivate()
-    {
-        IsActive = true;
     }
 
     public void UpdateDetails(string fullName, string email)

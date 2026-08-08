@@ -9,10 +9,11 @@ namespace AssignmentSystem.Application.Services;
 
 public class AuthService(
     IUserRepository userRepository,
-    IProfileRepository profileRepository,
     IGradeRepository gradeRepository,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
+    ITransactionService transactionService,
+    IProfileProvisioningService profileProvisioningService,
     IMapper mapper) : IAuthService
 {
     public async Task<AuthUser> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
@@ -38,8 +39,11 @@ public class AuthService(
 
         var user = AuthUser.CreatePending(request.FullName, email, passwordHasher.Hash(request.Password), request.Role);
 
-        await userRepository.AddAsync(user, ct);
-        await CreateProfileAsync(user, request.StudentGradeId, ct);
+        await transactionService.ExecuteAsync(async transactionCt =>
+        {
+            await userRepository.AddAsync(user, transactionCt);
+            await profileProvisioningService.CreateProfileAsync(user, request.StudentGradeId, transactionCt);
+        }, ct);
         return user;
     }
 
@@ -79,10 +83,23 @@ public class AuthService(
 
         if (approve)
         {
+            if (user.Status != AccountStatus.Pending)
+            {
+                throw new DomainException("Only pending users can be approved.");
+            }
+
             user.Approve();
         }
         else
         {
+            if (user.Role == UserRole.Admin
+                && user.Status == AccountStatus.Approved
+                && user.IsActive
+                && await userRepository.CountUsableAdminsAsync(ct) <= 1)
+            {
+                throw new DomainException("The last admin account cannot be rejected.");
+            }
+
             user.Reject();
         }
 
@@ -98,11 +115,6 @@ public class AuthService(
 
     private void EnsureUsable(AuthUser user)
     {
-        if (!user.IsActive)
-        {
-            throw new AccountInactiveException();
-        }
-
         switch (user.Status)
         {
             case AccountStatus.Pending:
@@ -110,18 +122,10 @@ public class AuthService(
             case AccountStatus.Rejected:
                 throw new AccountRejectedException();
         }
-    }
 
-    private async Task CreateProfileAsync(AuthUser user, Guid? studentGradeId, CancellationToken ct)
-    {
-        switch (user.Role)
+        if (!user.IsActive)
         {
-            case UserRole.Teacher:
-                await profileRepository.AddAsync(TeacherProfile.Create(user.Id), ct);
-                break;
-            case UserRole.Student:
-                await profileRepository.AddAsync(StudentProfile.Create(user.Id, studentGradeId!.Value), ct);
-                break;
+            throw new AccountInactiveException();
         }
     }
 

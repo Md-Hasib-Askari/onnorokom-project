@@ -20,5 +20,13 @@ public class UserUpdateRequestValidator : AbstractValidator<UserUpdateRequest>
         RuleFor(x => x.Status)
             .IsInEnum().WithMessage("Invalid status.")
             .NotEqual(AccountStatus.Pending).WithMessage("Pending cannot be set via user update; use the approval endpoint.");
+
+        RuleFor(x => x.TeacherProfile!)
+            .SetValidator(new TeacherProfileUpdateRequestValidator())
+            .When(x => x.TeacherProfile is not null);
+
+        RuleFor(x => x.AdminProfile!)
+            .SetValidator(new AdminProfileUpdateRequestValidator())
+            .When(x => x.AdminProfile is not null);
     }
 }

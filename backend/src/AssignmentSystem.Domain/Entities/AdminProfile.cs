@@ -14,6 +14,12 @@ public class AdminProfile : BaseEntity
     {
     }
 
+    public void UpdateDetails(string? position, string? phoneNumber)
+    {
+        Position = position;
+        PhoneNumber = phoneNumber;
+    }
+
     public static AdminProfile Create(Guid authUserId)
     {
         return new AdminProfile

@@ -30,4 +30,26 @@ public class UserUpdateRequestValidatorTests
 
         Assert.True(result.IsValid);
     }
+
+    [Fact]
+    public void Validate_TeacherProfileTooLongDepartment_Fails()
+    {
+        var request = new UserUpdateRequest("Name", "a@test.com", AccountStatus.Approved, true,
+            TeacherProfile: new TeacherProfileUpdateRequest(new string('x', 101), null, null, null, null, null));
+
+        var result = _validator.Validate(request);
+
+        Assert.False(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_AdminProfileTooLongPosition_Fails()
+    {
+        var request = new UserUpdateRequest("Name", "a@test.com", AccountStatus.Approved, true,
+            AdminProfile: new AdminProfileUpdateRequest(new string('x', 101), null));
+
+        var result = _validator.Validate(request);
+
+        Assert.False(result.IsValid);
+    }
 }

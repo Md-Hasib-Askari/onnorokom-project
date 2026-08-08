@@ -18,6 +18,22 @@ public class TeacherProfile : BaseEntity
     {
     }
 
+    public void UpdateDetails(
+        string? department,
+        string? designation,
+        string? qualification,
+        string? phoneNumber,
+        string? address,
+        DateTimeOffset? dateOfJoining)
+    {
+        Department = department;
+        Designation = designation;
+        Qualification = qualification;
+        PhoneNumber = phoneNumber;
+        Address = address;
+        DateOfJoining = dateOfJoining;
+    }
+
     public static TeacherProfile Create(Guid authUserId)
     {
         return new TeacherProfile

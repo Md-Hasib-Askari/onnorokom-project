@@ -22,6 +22,7 @@ public class DbInitializer(AppDbContext dbContext, IPasswordHasher passwordHashe
         var admin = AuthUser.CreateApprovedAdmin("System Administrator", AdminEmail, passwordHasher.Hash(AdminPassword));
 
         dbContext.AuthUsers.Add(admin);
+        dbContext.AdminProfiles.Add(AdminProfile.Create(admin.Id));
         await dbContext.SaveChangesAsync(ct);
     }
 }

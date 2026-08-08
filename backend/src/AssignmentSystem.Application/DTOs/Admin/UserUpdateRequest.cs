@@ -7,4 +7,6 @@ public record UserUpdateRequest(
     string Email,
     AccountStatus Status,
     bool IsActive,
-    Guid? StudentGradeId = null);
+    Guid? StudentGradeId = null,
+    TeacherProfileUpdateRequest? TeacherProfile = null,
+    AdminProfileUpdateRequest? AdminProfile = null);

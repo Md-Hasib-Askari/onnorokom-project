@@ -15,6 +15,7 @@ public interface IUserRepository
     Task<bool> HasAssignmentsAsync(Guid userId, CancellationToken ct = default);
     Task<bool> HasSubmissionsAsync(Guid userId, CancellationToken ct = default);
     Task<bool> HasGradedSubmissionsAsync(Guid userId, CancellationToken ct = default);
+    Task<int> CountUsableAdminsAsync(CancellationToken ct = default);
     Task AddAsync(AuthUser user, CancellationToken ct = default);
     Task UpdateAsync(AuthUser user, CancellationToken ct = default);
 }

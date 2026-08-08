@@ -51,7 +51,7 @@ public class AdminUserController(
         return Ok(user);
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id}")]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UserUpdateRequest request, CancellationToken ct)
     {
         var validation = await updateValidator.ValidateAsync(request, ct);
@@ -64,7 +64,7 @@ public class AdminUserController(
         return Ok(user);
     }
 
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(Guid id, CancellationToken ct)
     {
         await adminUserService.DeleteUserAsync(id, ct);
