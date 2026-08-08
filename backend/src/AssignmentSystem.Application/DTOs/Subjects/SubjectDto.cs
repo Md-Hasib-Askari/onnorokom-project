@@ -3,7 +3,7 @@ namespace AssignmentSystem.Application.DTOs.Subjects;
 public record SubjectDto(
     Guid Id,
     string Name,
-    string Code,
+    string? Code,
     Guid GradeId,
     string? GradeName,
     Guid? TeacherId,

@@ -22,7 +22,7 @@ public class SubjectService(
     public async Task<SubjectDto> CreateAsync(SubjectCreateRequest request, CancellationToken ct = default)
     {
         await EnsureGradeExistsAsync(request.GradeId, ct);
-        await EnsureCodeUniqueAsync(request.Code, request.GradeId, null, ct);
+        await EnsureNameUniqueAsync(request.Name, request.GradeId, null, ct);
         await EnsureIsTeacherAsync(request.TeacherId, ct);
 
         var subject = Subject.Create(request.Name, request.Code, request.GradeId, request.TeacherId);
@@ -36,7 +36,7 @@ public class SubjectService(
             ?? throw new EntityNotFoundException($"Subject with id {id} was not found.");
 
         await EnsureGradeExistsAsync(request.GradeId, ct);
-        await EnsureCodeUniqueAsync(request.Code, request.GradeId, subject, ct);
+        await EnsureNameUniqueAsync(request.Name, request.GradeId, subject, ct);
 
         subject.Update(request.Name, request.Code, request.GradeId);
         await subjectRepository.UpdateAsync(subject, ct);
@@ -81,18 +81,18 @@ public class SubjectService(
 
     private async Task EnsureGradeExistsAsync(Guid gradeId, CancellationToken ct)
     {
-        if (!await gradeRepository.ExistsAsync(gradeId, ct))
+        if (await gradeRepository.GetByIdAsync(gradeId, ct) is null)
         {
             throw new EntityNotFoundException($"Grade with id {gradeId} was not found.");
         }
     }
 
-    private async Task EnsureCodeUniqueAsync(string code, Guid gradeId, Subject? exclude, CancellationToken ct)
+    private async Task EnsureNameUniqueAsync(string name, Guid gradeId, Subject? exclude, CancellationToken ct)
     {
-        var isSame = exclude is not null && exclude.Code == code && exclude.GradeId == gradeId;
-        if (!isSame && await subjectRepository.ExistsAsync(code, gradeId, ct))
+        var isSame = exclude is not null && exclude.Name == name && exclude.GradeId == gradeId;
+        if (!isSame && await subjectRepository.ExistsByNameAsync(name, gradeId, ct))
         {
-            throw new DuplicateEntityException($"Subject with code '{code}' in grade {gradeId} already exists.");
+            throw new DuplicateEntityException($"Subject '{name}' in grade {gradeId} already exists.");
         }
     }
 

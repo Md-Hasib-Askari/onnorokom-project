@@ -1,3 +1,4 @@
+using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -28,9 +29,9 @@ public class SubjectRepository(AppDbContext dbContext) : ISubjectRepository
         return await dbContext.Subjects.AnyAsync(s => s.Id == id, ct);
     }
 
-    public async Task<bool> ExistsAsync(string code, Guid gradeId, CancellationToken ct = default)
+    public async Task<bool> ExistsByNameAsync(string name, Guid gradeId, CancellationToken ct = default)
     {
-        return await dbContext.Subjects.AnyAsync(s => s.Code == code && s.GradeId == gradeId, ct);
+        return await dbContext.Subjects.AnyAsync(s => s.Name == name && s.GradeId == gradeId, ct);
     }
 
     public async Task<bool> HasAssignmentsAsync(Guid id, CancellationToken ct = default)
@@ -41,12 +42,24 @@ public class SubjectRepository(AppDbContext dbContext) : ISubjectRepository
     public async Task AddAsync(Subject subject, CancellationToken ct = default)
     {
         dbContext.Subjects.Add(subject);
-        await dbContext.SaveChangesAsync(ct);
+        await SaveAsync(subject.Name, subject.GradeId, ct);
     }
 
     public async Task UpdateAsync(Subject subject, CancellationToken ct = default)
     {
         dbContext.Subjects.Update(subject);
-        await dbContext.SaveChangesAsync(ct);
+        await SaveAsync(subject.Name, subject.GradeId, ct);
+    }
+
+    private async Task SaveAsync(string name, Guid gradeId, CancellationToken ct)
+    {
+        try
+        {
+            await dbContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
+        {
+            throw new DuplicateEntityException($"Subject '{name}' in grade {gradeId} already exists.");
+        }
     }
 }

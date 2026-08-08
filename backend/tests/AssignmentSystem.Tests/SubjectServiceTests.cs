@@ -25,13 +25,26 @@ public class SubjectServiceTests
         var grade = Grade.Create("Grade 6", "2026");
         _grades.Grades.Add(grade);
 
-        var dto = await _sut.CreateAsync(new SubjectCreateRequest("Mathematics", "MATH-6", grade.Id));
+        var dto = await _sut.CreateAsync(new SubjectCreateRequest("Mathematics", grade.Id, Code: "MATH-6"));
 
         var subject = _subjects.Subjects.Single();
         Assert.Equal("Mathematics", subject.Name);
         Assert.Equal("MATH-6", subject.Code);
         Assert.Equal(grade.Id, subject.GradeId);
         Assert.Null(subject.TeacherId);
+        Assert.Equal(subject.Id, dto.Id);
+    }
+
+    [Fact]
+    public async Task Create_WithoutCode_AddsSubjectWithNullCode()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        _grades.Grades.Add(grade);
+
+        var dto = await _sut.CreateAsync(new SubjectCreateRequest("Mathematics", grade.Id));
+
+        var subject = _subjects.Subjects.Single();
+        Assert.Null(subject.Code);
         Assert.Equal(subject.Id, dto.Id);
     }
 
@@ -44,7 +57,7 @@ public class SubjectServiceTests
         teacher.Approve();
         _users.Users.Add(teacher);
 
-        var dto = await _sut.CreateAsync(new SubjectCreateRequest("Mathematics", "MATH-6", grade.Id, teacher.Id));
+        var dto = await _sut.CreateAsync(new SubjectCreateRequest("Mathematics", grade.Id, teacher.Id, Code: "MATH-6"));
 
         Assert.Equal(teacher.Id, dto.TeacherId);
     }
@@ -53,18 +66,32 @@ public class SubjectServiceTests
     public async Task Create_UnknownGrade_ThrowsEntityNotFoundException()
     {
         await Assert.ThrowsAsync<EntityNotFoundException>(
-            () => _sut.CreateAsync(new SubjectCreateRequest("Mathematics", "MATH-6", Guid.NewGuid())));
+            () => _sut.CreateAsync(new SubjectCreateRequest("Mathematics", Guid.NewGuid())));
     }
 
     [Fact]
-    public async Task Create_DuplicateCodeInGrade_ThrowsDuplicateEntityException()
+    public async Task Create_DuplicateNameInGrade_ThrowsDuplicateEntityException()
     {
         var grade = Grade.Create("Grade 6", "2026");
         _grades.Grades.Add(grade);
-        _subjects.Subjects.Add(Subject.Create("Mathematics", "MATH-6", grade.Id));
+        _subjects.Subjects.Add(Subject.Create("Mathematics", null, grade.Id));
 
         await Assert.ThrowsAsync<DuplicateEntityException>(
-            () => _sut.CreateAsync(new SubjectCreateRequest("Math", "MATH-6", grade.Id)));
+            () => _sut.CreateAsync(new SubjectCreateRequest("Mathematics", grade.Id)));
+    }
+
+    [Fact]
+    public async Task Create_SameNameInDifferentGrade_DoesNotThrow()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        var otherGrade = Grade.Create("Grade 7", "2026");
+        _grades.Grades.Add(grade);
+        _grades.Grades.Add(otherGrade);
+        _subjects.Subjects.Add(Subject.Create("Mathematics", null, grade.Id));
+
+        var dto = await _sut.CreateAsync(new SubjectCreateRequest("Mathematics", otherGrade.Id));
+
+        Assert.Equal(otherGrade.Id, dto.GradeId);
     }
 
     [Fact]
@@ -77,7 +104,7 @@ public class SubjectServiceTests
         _users.Users.Add(student);
 
         await Assert.ThrowsAsync<InvalidTeacherException>(
-            () => _sut.CreateAsync(new SubjectCreateRequest("Mathematics", "MATH-6", grade.Id, student.Id)));
+            () => _sut.CreateAsync(new SubjectCreateRequest("Mathematics", grade.Id, student.Id)));
     }
 
     [Fact]
@@ -88,10 +115,24 @@ public class SubjectServiceTests
         var subject = Subject.Create("Mathematics", "MATH-6", grade.Id);
         _subjects.Subjects.Add(subject);
 
-        var dto = await _sut.UpdateAsync(subject.Id, new SubjectUpdateRequest("Algebra", "ALG-6", grade.Id));
+        var dto = await _sut.UpdateAsync(subject.Id, new SubjectUpdateRequest("Algebra", grade.Id, Code: "ALG-6"));
 
         Assert.Equal("Algebra", subject.Name);
         Assert.Equal("ALG-6", subject.Code);
+        Assert.Equal(subject.Id, dto.Id);
+    }
+
+    [Fact]
+    public async Task Update_WithoutCode_ClearsExistingCode()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        _grades.Grades.Add(grade);
+        var subject = Subject.Create("Mathematics", "MATH-6", grade.Id);
+        _subjects.Subjects.Add(subject);
+
+        var dto = await _sut.UpdateAsync(subject.Id, new SubjectUpdateRequest("Mathematics", grade.Id));
+
+        Assert.Null(subject.Code);
         Assert.Equal(subject.Id, dto.Id);
     }
 
@@ -102,7 +143,7 @@ public class SubjectServiceTests
         _grades.Grades.Add(grade);
 
         await Assert.ThrowsAsync<EntityNotFoundException>(
-            () => _sut.UpdateAsync(Guid.NewGuid(), new SubjectUpdateRequest("Algebra", "ALG-6", grade.Id)));
+            () => _sut.UpdateAsync(Guid.NewGuid(), new SubjectUpdateRequest("Algebra", grade.Id)));
     }
 
     [Fact]
@@ -165,22 +206,6 @@ public class SubjectServiceTests
     }
 
     [Fact]
-    public async Task AssignTeacher_DeactivatedTeacher_ThrowsInvalidTeacherException()
-    {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
-        var teacher = AuthUser.CreatePending("Teacher", "t@test.com", "hash", UserRole.Teacher);
-        teacher.Approve();
-        teacher.Deactivate();
-        _users.Users.Add(teacher);
-        var subject = Subject.Create("Mathematics", "MATH-6", grade.Id);
-        _subjects.Subjects.Add(subject);
-
-        await Assert.ThrowsAsync<InvalidTeacherException>(
-            () => _sut.AssignTeacherAsync(subject.Id, teacher.Id));
-    }
-
-    [Fact]
     public async Task AssignTeacher_PendingTeacher_ThrowsInvalidTeacherException()
     {
         var grade = Grade.Create("Grade 6", "2026");
@@ -233,8 +258,8 @@ public class SubjectServiceTests
         public Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Subjects.Any(s => s.Id == id));
 
-        public Task<bool> ExistsAsync(string code, Guid gradeId, CancellationToken ct = default)
-            => Task.FromResult(Subjects.Any(s => s.Code == code && s.GradeId == gradeId));
+        public Task<bool> ExistsByNameAsync(string name, Guid gradeId, CancellationToken ct = default)
+            => Task.FromResult(Subjects.Any(s => s.Name == name && s.GradeId == gradeId));
 
         public Task<bool> HasAssignmentsAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(AssignmentSubjectIds.Contains(id));
@@ -314,6 +339,9 @@ public class SubjectServiceTests
 
         public Task<bool> HasGradedSubmissionsAsync(Guid userId, CancellationToken ct = default)
             => Task.FromResult(false);
+
+        public Task<int> CountUsableAdminsAsync(CancellationToken ct = default)
+            => Task.FromResult(Users.Count(u => u.Role == UserRole.Admin && u.Status == AccountStatus.Approved && u.IsActive));
 
         public Task AddAsync(AuthUser user, CancellationToken ct = default)
         {

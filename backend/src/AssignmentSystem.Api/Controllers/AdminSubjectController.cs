@@ -36,7 +36,7 @@ public class AdminSubjectController(
         return Ok(subject);
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] SubjectUpdateRequest request, CancellationToken ct)
     {
         var validation = await updateValidator.ValidateAsync(request, ct);
@@ -49,14 +49,14 @@ public class AdminSubjectController(
         return Ok(subject);
     }
 
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await subjectService.DeleteAsync(id, ct);
         return NoContent();
     }
 
-    [HttpPost("{id:guid}/teacher")]
+    [HttpPost("{id}/teacher")]
     public async Task<IActionResult> AssignTeacher(Guid id, [FromBody] AssignTeacherRequest request, CancellationToken ct)
     {
         var validation = await assignTeacherValidator.ValidateAsync(request, ct);
@@ -69,7 +69,7 @@ public class AdminSubjectController(
         return Ok(subject);
     }
 
-    [HttpDelete("{id:guid}/teacher")]
+    [HttpDelete("{id}/teacher")]
     public async Task<IActionResult> UnassignTeacher(Guid id, CancellationToken ct)
     {
         var subject = await subjectService.UnassignTeacherAsync(id, ct);
