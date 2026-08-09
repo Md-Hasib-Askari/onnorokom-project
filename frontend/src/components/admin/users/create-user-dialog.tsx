@@ -43,7 +43,7 @@ import {
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false);
-  const grades = AdminGradeQueries.useList();
+  const grades = AdminGradeQueries.useCurrentYearList();
   const mutation = AdminUserMutations.useCreate();
 
   const form = useForm<AdminCreateUserRequest>({
@@ -187,7 +187,7 @@ export function CreateUserDialog() {
                       <SelectContent>
                         {grades.data?.map((grade) => (
                           <SelectItem key={grade.id} value={grade.id}>
-                            {grade.name} ({grade.academicYear})
+                            {grade.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

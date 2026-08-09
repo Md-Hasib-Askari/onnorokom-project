@@ -49,7 +49,7 @@ interface EditUserDialogProps {
 }
 
 export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
-  const grades = AdminGradeQueries.useList();
+  const grades = AdminGradeQueries.useCurrentYearList();
   const mutation = AdminUserMutations.useUpdate();
 
   const form = useForm<AdminUpdateUserRequest>({
@@ -177,7 +177,7 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
                       <SelectContent>
                         {grades.data?.map((grade) => (
                           <SelectItem key={grade.id} value={grade.id}>
-                            {grade.name} ({grade.academicYear})
+                            {grade.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
