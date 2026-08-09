@@ -9,6 +9,7 @@ export function buildRejectedColumns(options: {
   onApprove: (user: AdminUserSummary, approve: boolean) => void;
   onDelete: (user: AdminUserSummary) => void;
   pendingId?: string;
+  deletingId?: string;
 }): ColumnDef<AdminUserSummary>[] {
   return [
     { accessorKey: "fullName", header: "Name" },
@@ -29,17 +30,18 @@ export function buildRejectedColumns(options: {
       cell: ({ row }) => {
         const user = row.original;
         const busy = options.pendingId === user.id;
+        const deleting = options.deletingId === user.id;
         return (
           <div className="flex justify-end gap-2">
             <Button
               size="sm"
               variant="outline"
-              disabled={busy}
+              disabled={busy || deleting}
               onClick={() => options.onDelete(user)}
             >
               Delete
             </Button>
-            <Button size="sm" disabled={busy} onClick={() => options.onApprove(user, true)}>
+            <Button size="sm" disabled={busy || deleting} onClick={() => options.onApprove(user, true)}>
               Approve
             </Button>
           </div>

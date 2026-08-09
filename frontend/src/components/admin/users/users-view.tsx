@@ -37,6 +37,7 @@ export function UsersView({ currentUserId }: UsersViewProps) {
   const usersQuery = AdminUserQueries.useList();
   const pendingQuery = AdminUserQueries.usePending();
   const approveMutation = AdminUserMutations.useApprove();
+  const deleteMutation = AdminUserMutations.useDelete();
 
   const [editingUser, setEditingUser] = useState<AdminUserSummary | null>(null);
   const [deletingUser, setDeletingUser] = useState<AdminUserSummary | null>(null);
@@ -74,6 +75,7 @@ export function UsersView({ currentUserId }: UsersViewProps) {
     onApprove: handleApprove,
     onDelete: setDeletingUser,
     pendingId: approveMutation.isPending ? approveMutation.variables?.userId : undefined,
+    deletingId: deleteMutation.isPending ? deleteMutation.variables : undefined,
   });
 
   return (
@@ -140,7 +142,11 @@ export function UsersView({ currentUserId }: UsersViewProps) {
       </Tabs>
 
       <EditUserDialog user={editingUser} onOpenChange={(open) => !open && setEditingUser(null)} />
-      <DeleteUserDialog user={deletingUser} onOpenChange={(open) => !open && setDeletingUser(null)} />
+      <DeleteUserDialog
+        user={deletingUser}
+        onOpenChange={(open) => !open && setDeletingUser(null)}
+        mutation={deleteMutation}
+      />
     </div>
   );
 }

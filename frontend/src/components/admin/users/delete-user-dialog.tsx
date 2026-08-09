@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { AdminUserMutations } from "@/lib/mutations/admin-users.mutations";
+import type { AdminUserMutations } from "@/lib/mutations/admin-users.mutations";
 import type { AdminUserSummary } from "@/lib/api/schemas/admin-users.schema";
 import { ERROR_MESSAGES } from "@/lib/messages";
 import {
@@ -18,11 +18,10 @@ import {
 interface DeleteUserDialogProps {
   user: AdminUserSummary | null;
   onOpenChange: (open: boolean) => void;
+  mutation: ReturnType<typeof AdminUserMutations.useDelete>;
 }
 
-export function DeleteUserDialog({ user, onOpenChange }: DeleteUserDialogProps) {
-  const mutation = AdminUserMutations.useDelete();
-
+export function DeleteUserDialog({ user, onOpenChange, mutation }: DeleteUserDialogProps) {
   function handleDelete() {
     if (!user) return;
     mutation.mutate(user.id, {
