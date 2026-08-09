@@ -51,6 +51,8 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
     private static object ValidationError(ValidationException ex) => new
     {
         error = "Validation failed.",
-        errors = ex.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage)
+        errors = ex.Errors
+            .GroupBy(e => e.PropertyName)
+            .ToDictionary(g => g.Key, g => g.First().ErrorMessage)
     };
 }
