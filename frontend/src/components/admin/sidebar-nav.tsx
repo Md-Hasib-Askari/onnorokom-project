@@ -22,9 +22,9 @@ type SidebarNavItem = {
 
 const navItems: SidebarNavItem[] = [
   { href: ROUTES.adminUsers, label: "Users", icon: UsersIcon, enabled: true },
-  { href: ROUTES.adminGrades, label: "Grades", icon: GraduationCapIcon, enabled: false },
-  { href: ROUTES.adminSubjects, label: "Subjects", icon: BookOpenIcon, enabled: false },
-  { href: ROUTES.adminAssignments, label: "Assignments", icon: ClipboardListIcon, enabled: false },
+  { href: ROUTES.adminGrades, label: "Grades", icon: GraduationCapIcon, enabled: true },
+  { href: ROUTES.adminSubjects, label: "Subjects", icon: BookOpenIcon, enabled: true },
+  { href: ROUTES.adminAssignments, label: "Assignments", icon: ClipboardListIcon, enabled: true },
 ];
 
 export function SidebarNav() {
