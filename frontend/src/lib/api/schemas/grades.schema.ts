@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { VALIDATION_MESSAGES } from "@/lib/messages";
 
 // ---- GET /api/admin/grades ----
 
@@ -11,3 +12,27 @@ export const gradeSummarySchema = z.object({
 export type GradeSummary = z.infer<typeof gradeSummarySchema>;
 
 export const gradeListResponseSchema = z.array(gradeSummarySchema);
+
+// ---- POST /api/admin/grades ----
+
+export const gradeCreateRequestSchema = z.object({
+  name: z.string().trim().min(1, VALIDATION_MESSAGES.gradeNameRequired).max(100),
+  academicYear: z.string().trim().min(1, VALIDATION_MESSAGES.academicYearRequired).max(20),
+  description: z.string().trim().max(500).optional(),
+});
+export type GradeCreateRequest = z.infer<typeof gradeCreateRequestSchema>;
+
+export const gradeCreateResponseSchema = gradeSummarySchema;
+export type GradeCreateResponse = z.infer<typeof gradeCreateResponseSchema>;
+
+// ---- PUT /api/admin/grades/:id ----
+
+export const gradeUpdateRequestSchema = z.object({
+  name: z.string().trim().min(1, VALIDATION_MESSAGES.gradeNameRequired).max(100),
+  academicYear: z.string().trim().min(1, VALIDATION_MESSAGES.academicYearRequired).max(20),
+  description: z.string().trim().max(500).optional(),
+});
+export type GradeUpdateRequest = z.infer<typeof gradeUpdateRequestSchema>;
+
+export const gradeUpdateResponseSchema = gradeSummarySchema;
+export type GradeUpdateResponse = z.infer<typeof gradeUpdateResponseSchema>;
