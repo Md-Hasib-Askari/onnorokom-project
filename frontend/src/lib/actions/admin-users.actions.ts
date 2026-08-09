@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { AdminUsersApi } from "@/lib/api/admin-users.api";
 import { AdminGradesApi } from "@/lib/api/admin-grades.api";
 import { ApiError } from "@/lib/api/client";
@@ -24,22 +25,42 @@ async function accessTokenOrThrow(): Promise<string> {
   return token;
 }
 
+/** Redirects to login on an expired/missing session instead of surfacing a generic load error. */
+function redirectOnSessionExpired(error: unknown): never {
+  if (error instanceof ApiError && error.status === HttpStatus.Unauthorized) {
+    redirect(ROUTES.login);
+  }
+  throw error;
+}
+
 export async function listUsersAction() {
   await requireRole(UserRole.Admin);
-  const token = await accessTokenOrThrow();
-  return AdminUsersApi.list(token);
+  try {
+    const token = await accessTokenOrThrow();
+    return await AdminUsersApi.list(token);
+  } catch (error) {
+    redirectOnSessionExpired(error);
+  }
 }
 
 export async function listPendingUsersAction() {
   await requireRole(UserRole.Admin);
-  const token = await accessTokenOrThrow();
-  return AdminUsersApi.listPending(token);
+  try {
+    const token = await accessTokenOrThrow();
+    return await AdminUsersApi.listPending(token);
+  } catch (error) {
+    redirectOnSessionExpired(error);
+  }
 }
 
 export async function listGradesAction() {
   await requireRole(UserRole.Admin);
-  const token = await accessTokenOrThrow();
-  return AdminGradesApi.list(token);
+  try {
+    const token = await accessTokenOrThrow();
+    return await AdminGradesApi.list(token);
+  } catch (error) {
+    redirectOnSessionExpired(error);
+  }
 }
 
 export async function approveUserAction(userId: string, approve: boolean): Promise<ActionResult> {

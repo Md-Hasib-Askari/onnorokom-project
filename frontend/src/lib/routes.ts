@@ -25,12 +25,24 @@ export const NEXT_PATH_PARAM = "next";
 /**
  * Returns `path` only when it is a safe in-app path, otherwise `undefined`.
  *
- * Rejects protocol-relative (`//host`), backslash-prefixed (`/\host`), and any
- * other value containing a backslash, all of which browsers can resolve as a
- * cross-origin location. Never trust a `next` query param without this check.
+ * Resolves `path` against a dummy origin and rejects it unless the resolved
+ * origin is unchanged. A prefix check alone (blocking `//`, `\`) is not
+ * enough: WHATWG URL parsing strips control characters like tabs before
+ * resolving, so `/\t/evil.com` slips past a prefix check but still resolves
+ * cross-origin in the browser. Never trust a `next` query param without this
+ * check.
  */
 export function sanitizeNextPath(path: string | null | undefined): string | undefined {
-  if (!path || !path.startsWith(ROUTES.home)) return undefined;
-  if (path.startsWith("//") || path.includes("\\")) return undefined;
-  return path;
+  if (!path) return undefined;
+  const DUMMY_ORIGIN = "http://sanitize.invalid";
+  let url: URL;
+  try {
+    url = new URL(path, DUMMY_ORIGIN);
+  } catch {
+    return undefined;
+  }
+  if (url.origin !== DUMMY_ORIGIN) return undefined;
+  const resolved = `${url.pathname}${url.search}${url.hash}`;
+  if (!resolved.startsWith(ROUTES.home)) return undefined;
+  return resolved;
 }
