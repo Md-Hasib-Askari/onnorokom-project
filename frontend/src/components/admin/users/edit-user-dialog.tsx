@@ -95,6 +95,9 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
             toast.error(result.error ?? ERROR_MESSAGES.generic);
           }
         },
+        onError: () => {
+          toast.error(ERROR_MESSAGES.genericRetry);
+        },
       }
     );
   }

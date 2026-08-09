@@ -76,6 +76,9 @@ export function CreateUserDialog() {
           toast.error(result.error ?? ERROR_MESSAGES.generic);
         }
       },
+      onError: () => {
+        toast.error(ERROR_MESSAGES.genericRetry);
+      },
     });
   }
 

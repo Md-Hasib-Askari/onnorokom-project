@@ -35,6 +35,9 @@ export function DeleteUserDialog({ user, onOpenChange }: DeleteUserDialogProps) 
           onOpenChange(false);
         }
       },
+      onError: () => {
+        toast.error(ERROR_MESSAGES.genericRetry);
+      },
     });
   }
 
