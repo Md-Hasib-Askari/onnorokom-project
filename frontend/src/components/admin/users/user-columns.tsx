@@ -88,9 +88,11 @@ export function buildUserColumns(options: {
               ) : (
                 <DropdownMenuItem onClick={() => options.onEdit(user)}>Edit</DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={() => options.onDelete(user)} variant="destructive">
-                Delete
-              </DropdownMenuItem>
+              {user.id !== options.currentUserId && (
+                <DropdownMenuItem onClick={() => options.onDelete(user)} variant="destructive">
+                  Delete
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         );
