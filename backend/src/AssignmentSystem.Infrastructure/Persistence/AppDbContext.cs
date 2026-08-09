@@ -15,9 +15,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
     public DbSet<StudentProfile> StudentProfiles => Set<StudentProfile>();
     public DbSet<AdminProfile> AdminProfiles => Set<AdminProfile>();
     public DbSet<Grade> Grades => Set<Grade>();
+    public DbSet<Section> Sections => Set<Section>();
     public DbSet<Subject> Subjects => Set<Subject>();
+    public DbSet<SectionSubject> SectionSubjects => Set<SectionSubject>();
     public DbSet<Assignment> Assignments => Set<Assignment>();
     public DbSet<Submission> Submissions => Set<Submission>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,9 +28,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
 
         modelBuilder.ApplyConfiguration(new AuthUserConfiguration());
         modelBuilder.ApplyConfiguration(new GradeConfiguration());
+        modelBuilder.ApplyConfiguration(new SectionConfiguration());
         modelBuilder.ApplyConfiguration(new SubjectConfiguration());
+        modelBuilder.ApplyConfiguration(new SectionSubjectConfiguration());
         modelBuilder.ApplyConfiguration(new AssignmentConfiguration());
         modelBuilder.ApplyConfiguration(new SubmissionConfiguration());
+        modelBuilder.ApplyConfiguration(new SystemSettingConfiguration());
 
         ApplySoftDeleteQueryFilters(modelBuilder);
     }
