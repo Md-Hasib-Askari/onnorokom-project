@@ -25,30 +25,8 @@ public class AdminUserService(
 
     private async Task<UserListItemDto> BuildDtoAsync(AuthUser user, CancellationToken ct)
     {
-        Guid? gradeId = null;
-        string? gradeName = null;
-
-        if (user.Role == UserRole.Student)
-        {
-            var studentProfile = await profileRepository.GetStudentByUserIdAsync(user.Id, ct);
-            if (studentProfile is not null)
-            {
-                gradeId = studentProfile.GradeId;
-                var grade = await gradeRepository.GetByIdAsync(studentProfile.GradeId, ct);
-                gradeName = grade?.Name;
-            }
-        }
-
-        return new UserListItemDto(
-            user.Id,
-            user.FullName,
-            user.Email,
-            user.Role,
-            user.Status,
-            user.CreatedAt,
-            user.IsActive,
-            gradeId,
-            gradeName);
+        var dtos = await UserListItemDtoFactory.BuildAsync([user], profileRepository, gradeRepository, ct);
+        return dtos[0];
     }
 
     public async Task<UserListItemDto> CreateUserAsync(UserCreateRequest request, CancellationToken ct = default)
