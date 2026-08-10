@@ -50,10 +50,7 @@ export async function createSubjectAction(input: SubjectCreateRequest): Promise<
   }
   try {
     const token = await accessTokenOrThrow();
-    await AdminSubjectsApi.create(token, {
-      ...parsed.data,
-      teacherId: parsed.data.teacherId || undefined,
-    });
+    await AdminSubjectsApi.create(token, parsed.data);
   } catch (error) {
     if (error instanceof ApiError) return { success: false, error: error.message, fieldErrors: error.fieldErrors };
     return { success: false, error: ERROR_MESSAGES.genericRetry };
@@ -92,28 +89,3 @@ export async function deleteSubjectAction(id: string): Promise<ActionResult> {
   return { success: true };
 }
 
-export async function assignTeacherAction(subjectId: string, teacherId: string): Promise<ActionResult> {
-  await requireRole(UserRole.Admin);
-  try {
-    const token = await accessTokenOrThrow();
-    await AdminSubjectsApi.assignTeacher(token, subjectId, teacherId);
-  } catch (error) {
-    if (error instanceof ApiError) return { success: false, error: error.message, fieldErrors: error.fieldErrors };
-    return { success: false, error: ERROR_MESSAGES.genericRetry };
-  }
-  revalidatePath(ROUTES.adminSubjects);
-  return { success: true };
-}
-
-export async function unassignTeacherAction(subjectId: string): Promise<ActionResult> {
-  await requireRole(UserRole.Admin);
-  try {
-    const token = await accessTokenOrThrow();
-    await AdminSubjectsApi.unassignTeacher(token, subjectId);
-  } catch (error) {
-    if (error instanceof ApiError) return { success: false, error: error.message };
-    return { success: false, error: ERROR_MESSAGES.genericRetry };
-  }
-  revalidatePath(ROUTES.adminSubjects);
-  return { success: true };
-}

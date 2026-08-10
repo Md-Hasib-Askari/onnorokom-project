@@ -4,7 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontalIcon } from "lucide-react";
 
 import type { SubjectSummary } from "@/lib/api/schemas/admin-subjects.schema";
-import { Badge } from "@/components/ui/badge";
+import { EMPTY_CELL } from "@/lib/messages";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,8 +16,6 @@ import {
 export function buildSubjectColumns(options: {
   onEdit: (subject: SubjectSummary) => void;
   onDelete: (subject: SubjectSummary) => void;
-  onAssignTeacher: (subject: SubjectSummary) => void;
-  onUnassignTeacher: (subject: SubjectSummary) => void;
 }): ColumnDef<SubjectSummary>[] {
   return [
     {
@@ -27,22 +25,12 @@ export function buildSubjectColumns(options: {
     {
       accessorKey: "code",
       header: "Code",
-      cell: ({ row }) => row.original.code ?? "—",
+      cell: ({ row }) => row.original.code ?? EMPTY_CELL,
     },
     {
       accessorKey: "gradeName",
       header: "Grade",
-      cell: ({ row }) => row.original.gradeName ?? "—",
-    },
-    {
-      accessorKey: "teacherName",
-      header: "Teacher",
-      cell: ({ row }) =>
-        row.original.teacherName ? (
-          row.original.teacherName
-        ) : (
-          <Badge variant="secondary">Unassigned</Badge>
-        ),
+      cell: ({ row }) => row.original.gradeName ?? EMPTY_CELL,
     },
     {
       id: "actions",
@@ -59,14 +47,6 @@ export function buildSubjectColumns(options: {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => options.onEdit(subject)}>Edit subject</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => options.onAssignTeacher(subject)}>
-                {subject.teacherId ? "Reassign teacher" : "Assign teacher"}
-              </DropdownMenuItem>
-              {subject.teacherId && (
-                <DropdownMenuItem onClick={() => options.onUnassignTeacher(subject)}>
-                  Unassign teacher
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem onClick={() => options.onDelete(subject)} variant="destructive">
                 Delete
               </DropdownMenuItem>

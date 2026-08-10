@@ -10,11 +10,9 @@ import {
   subjectCreateRequestSchema,
   type SubjectCreateRequest,
 } from "@/lib/api/schemas/admin-subjects.schema";
-import { isEligibleTeacher } from "@/lib/eligible-teacher";
 import { ERROR_MESSAGES } from "@/lib/messages";
 import { AdminSubjectMutations } from "@/lib/mutations/admin-subjects.mutations";
 import { AdminGradeQueries } from "@/lib/queries/admin-grades.queries";
-import { AdminUserQueries } from "@/lib/queries/admin-users.queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -42,20 +40,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/** Radix `SelectItem` rejects an empty-string value, so the "no teacher yet" option uses this sentinel. */
-const NO_TEACHER_VALUE = "none";
-
 export function CreateSubjectDialog() {
   const [open, setOpen] = useState(false);
   const grades = AdminGradeQueries.useCurrentYearList();
-  const users = AdminUserQueries.useList();
   const mutation = AdminSubjectMutations.useCreate();
-
-  const eligibleTeachers = (users.data ?? []).filter(isEligibleTeacher);
 
   const form = useForm<SubjectCreateRequest>({
     resolver: zodResolver(subjectCreateRequestSchema),
-    defaultValues: { name: "", gradeId: "", code: "", teacherId: "" },
+    defaultValues: { name: "", gradeId: "", code: "" },
   });
 
   function onSubmit(values: SubjectCreateRequest) {
@@ -99,7 +91,7 @@ export function CreateSubjectDialog() {
         <DialogHeader>
           <DialogTitle>Create subject</DialogTitle>
           <DialogDescription>
-            Optionally assign a teacher now, or later from the subject&apos;s row menu.
+            Assign a teacher for each section from the section&apos;s row menu.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -146,36 +138,6 @@ export function CreateSubjectDialog() {
                       {grades.data?.map((grade) => (
                         <SelectItem key={grade.id} value={grade.id}>
                           {grade.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="teacherId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Teacher</FormLabel>
-                  <Select
-                    value={field.value || NO_TEACHER_VALUE}
-                    onValueChange={(value) =>
-                      field.onChange(value === NO_TEACHER_VALUE ? "" : value)
-                    }
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder={users.isLoading ? "Loading..." : "Select a teacher"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={NO_TEACHER_VALUE}>No teacher yet</SelectItem>
-                      {eligibleTeachers.map((teacher) => (
-                        <SelectItem key={teacher.id} value={teacher.id}>
-                          {teacher.fullName}
                         </SelectItem>
                       ))}
                     </SelectContent>

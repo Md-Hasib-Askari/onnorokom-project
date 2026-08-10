@@ -2,10 +2,8 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  assignTeacherAction,
   createSubjectAction,
   deleteSubjectAction,
-  unassignTeacherAction,
   updateSubjectAction,
 } from "@/lib/actions/admin-subjects.actions";
 import type {
@@ -45,31 +43,6 @@ export const AdminSubjectMutations = {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: (id: string) => deleteSubjectAction(id),
-      onSuccess: (result) => {
-        if (result.success) {
-          queryClient.invalidateQueries({ queryKey: adminSubjectsKeys.all });
-        }
-      },
-    });
-  },
-
-  useAssignTeacher() {
-    const queryClient = useQueryClient();
-    return useMutation({
-      mutationFn: ({ subjectId, teacherId }: { subjectId: string; teacherId: string }) =>
-        assignTeacherAction(subjectId, teacherId),
-      onSuccess: (result) => {
-        if (result.success) {
-          queryClient.invalidateQueries({ queryKey: adminSubjectsKeys.all });
-        }
-      },
-    });
-  },
-
-  useUnassignTeacher() {
-    const queryClient = useQueryClient();
-    return useMutation({
-      mutationFn: (subjectId: string) => unassignTeacherAction(subjectId),
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: adminSubjectsKeys.all });

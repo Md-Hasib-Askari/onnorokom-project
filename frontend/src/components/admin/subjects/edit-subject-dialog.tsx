@@ -96,7 +96,8 @@ export function EditSubjectDialog({ subject, onOpenChange }: EditSubjectDialogPr
         <DialogHeader>
           <DialogTitle>Edit subject</DialogTitle>
           <DialogDescription>
-            Update name, code, and grade. Use the row menu to change the assigned teacher.
+            Update name, code, and grade. Moving a subject to another grade clears its section
+            teacher assignments.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
