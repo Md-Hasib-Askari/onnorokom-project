@@ -2,7 +2,6 @@ using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.DTOs.Subjects;
 using AssignmentSystem.Domain.Entities;
-using AssignmentSystem.Domain.Enums;
 using AutoMapper;
 
 namespace AssignmentSystem.Application.Services;
@@ -10,7 +9,7 @@ namespace AssignmentSystem.Application.Services;
 public class SubjectService(
     ISubjectRepository subjectRepository,
     IGradeRepository gradeRepository,
-    IUserRepository userRepository,
+    ISectionSubjectRepository sectionSubjectRepository,
     IMapper mapper) : ISubjectService
 {
     public async Task<List<SubjectDto>> GetAllAsync(CancellationToken ct = default)
@@ -21,11 +20,10 @@ public class SubjectService(
 
     public async Task<SubjectDto> CreateAsync(SubjectCreateRequest request, CancellationToken ct = default)
     {
-        await EnsureGradeExistsAsync(request.GradeId, ct);
-        await EnsureNameUniqueAsync(request.Name, request.GradeId, null, ct);
-        await EnsureIsTeacherAsync(request.TeacherId, ct);
+        var grade = await GetGradeAsync(request.GradeId, ct);
+        await EnsureNameUniqueAsync(request.Name, grade, null, ct);
 
-        var subject = Subject.Create(request.Name, request.Code, request.GradeId, request.TeacherId);
+        var subject = Subject.Create(request.Name, request.Code, request.GradeId);
         await subjectRepository.AddAsync(subject, ct);
         return mapper.Map<SubjectDto>(subject);
     }
@@ -35,8 +33,17 @@ public class SubjectService(
         var subject = await subjectRepository.GetByIdAsync(id, ct)
             ?? throw new EntityNotFoundException($"Subject with id {id} was not found.");
 
-        await EnsureGradeExistsAsync(request.GradeId, ct);
-        await EnsureNameUniqueAsync(request.Name, request.GradeId, subject, ct);
+        var grade = await GetGradeAsync(request.GradeId, ct);
+        await EnsureNameUniqueAsync(request.Name, grade, subject, ct);
+
+        var movedToAnotherGrade = subject.GradeId != request.GradeId;
+        if (movedToAnotherGrade)
+        {
+            // The links tie this subject to sections of its old grade, a pairing the subject
+            // list rejects outright. Left live they stay invisible yet still count as "teacher
+            // assigned", and reappear if the subject moves back.
+            await sectionSubjectRepository.SoftDeleteForSubjectAsync(id, ct);
+        }
 
         subject.Update(request.Name, request.Code, request.GradeId);
         await subjectRepository.UpdateAsync(subject, ct);
@@ -53,60 +60,24 @@ public class SubjectService(
             throw new EntityInUseException($"Subject '{subject.Name}' cannot be deleted because it has assignments.");
         }
 
+        await sectionSubjectRepository.SoftDeleteForSubjectAsync(id, ct);
+
         subject.Delete();
         await subjectRepository.UpdateAsync(subject, ct);
     }
 
-    public async Task<SubjectDto> AssignTeacherAsync(Guid id, Guid teacherId, CancellationToken ct = default)
+    private async Task<Grade> GetGradeAsync(Guid gradeId, CancellationToken ct)
     {
-        var subject = await subjectRepository.GetByIdAsync(id, ct)
-            ?? throw new EntityNotFoundException($"Subject with id {id} was not found.");
-
-        await EnsureIsTeacherAsync(teacherId, ct);
-
-        subject.AssignTeacher(teacherId);
-        await subjectRepository.UpdateAsync(subject, ct);
-        return mapper.Map<SubjectDto>(subject);
+        return await gradeRepository.GetByIdAsync(gradeId, ct)
+            ?? throw new EntityNotFoundException($"Grade with id {gradeId} was not found.");
     }
 
-    public async Task<SubjectDto> UnassignTeacherAsync(Guid id, CancellationToken ct = default)
+    private async Task EnsureNameUniqueAsync(string name, Grade grade, Subject? exclude, CancellationToken ct)
     {
-        var subject = await subjectRepository.GetByIdAsync(id, ct)
-            ?? throw new EntityNotFoundException($"Subject with id {id} was not found.");
-
-        subject.UnassignTeacher();
-        await subjectRepository.UpdateAsync(subject, ct);
-        return mapper.Map<SubjectDto>(subject);
-    }
-
-    private async Task EnsureGradeExistsAsync(Guid gradeId, CancellationToken ct)
-    {
-        if (await gradeRepository.GetByIdAsync(gradeId, ct) is null)
+        var isSame = exclude is not null && exclude.Name == name && exclude.GradeId == grade.Id;
+        if (!isSame && await subjectRepository.ExistsByNameAsync(name, grade.Id, ct))
         {
-            throw new EntityNotFoundException($"Grade with id {gradeId} was not found.");
-        }
-    }
-
-    private async Task EnsureNameUniqueAsync(string name, Guid gradeId, Subject? exclude, CancellationToken ct)
-    {
-        var isSame = exclude is not null && exclude.Name == name && exclude.GradeId == gradeId;
-        if (!isSame && await subjectRepository.ExistsByNameAsync(name, gradeId, ct))
-        {
-            throw new DuplicateEntityException($"Subject '{name}' in grade {gradeId} already exists.");
-        }
-    }
-
-    private async Task EnsureIsTeacherAsync(Guid? teacherId, CancellationToken ct)
-    {
-        if (teacherId is null)
-        {
-            return;
-        }
-
-        var teacher = await userRepository.GetByIdAsync(teacherId.Value, ct);
-        if (teacher is null || !teacher.IsUsableTeacher)
-        {
-            throw new InvalidTeacherException($"User with id {teacherId} is not an approved active teacher.");
+            throw new DuplicateEntityException($"Subject '{name}' in {grade.Name} already exists.");
         }
     }
 }

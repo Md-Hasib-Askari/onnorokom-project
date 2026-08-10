@@ -11,7 +11,6 @@ public class SubjectRepository(AppDbContext dbContext) : ISubjectRepository
     {
         return await dbContext.Subjects
             .Include(s => s.Grade)
-            .Include(s => s.Teacher)
             .OrderBy(s => s.Name)
             .ToListAsync(ct);
     }
@@ -20,7 +19,6 @@ public class SubjectRepository(AppDbContext dbContext) : ISubjectRepository
     {
         return await dbContext.Subjects
             .Include(s => s.Grade)
-            .Include(s => s.Teacher)
             .FirstOrDefaultAsync(s => s.Id == id, ct);
     }
 
@@ -59,7 +57,10 @@ public class SubjectRepository(AppDbContext dbContext) : ISubjectRepository
         }
         catch (DbUpdateException ex) when (ex.IsUniqueViolation())
         {
-            throw new DuplicateEntityException($"Subject '{name}' in grade {gradeId} already exists.");
+            // Only reachable when a concurrent write slips past SubjectService's own uniqueness
+            // check, so word it the same way that check does rather than exposing the grade id.
+            var gradeLabel = await dbContext.GetGradeLabelAsync(gradeId, ct);
+            throw new DuplicateEntityException($"Subject '{name}' in {gradeLabel} already exists.");
         }
     }
 }

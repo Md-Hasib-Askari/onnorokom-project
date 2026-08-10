@@ -8,6 +8,4 @@ public interface ISubjectService
     Task<SubjectDto> CreateAsync(SubjectCreateRequest request, CancellationToken ct = default);
     Task<SubjectDto> UpdateAsync(Guid id, SubjectUpdateRequest request, CancellationToken ct = default);
     Task DeleteAsync(Guid id, CancellationToken ct = default);
-    Task<SubjectDto> AssignTeacherAsync(Guid id, Guid teacherId, CancellationToken ct = default);
-    Task<SubjectDto> UnassignTeacherAsync(Guid id, CancellationToken ct = default);
 }

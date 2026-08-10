@@ -3,7 +3,6 @@ using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.DTOs.Subjects;
 using AssignmentSystem.Application.Services;
 using AssignmentSystem.Domain.Entities;
-using AssignmentSystem.Domain.Enums;
 
 namespace AssignmentSystem.Tests;
 
@@ -11,12 +10,12 @@ public class SubjectServiceTests
 {
     private readonly FakeSubjectRepository _subjects = new();
     private readonly FakeGradeRepository _grades = new();
-    private readonly FakeUserRepository _users = new();
+    private readonly FakeSectionSubjectRepository _sectionSubjects = new();
     private readonly SubjectService _sut;
 
     public SubjectServiceTests()
     {
-        _sut = new SubjectService(_subjects, _grades, _users, TestMappers.CreateMapper());
+        _sut = new SubjectService(_subjects, _grades, _sectionSubjects, TestMappers.CreateMapper());
     }
 
     [Fact]
@@ -31,7 +30,6 @@ public class SubjectServiceTests
         Assert.Equal("Mathematics", subject.Name);
         Assert.Equal("MATH-6", subject.Code);
         Assert.Equal(grade.Id, subject.GradeId);
-        Assert.Null(subject.TeacherId);
         Assert.Equal(subject.Id, dto.Id);
     }
 
@@ -46,20 +44,6 @@ public class SubjectServiceTests
         var subject = _subjects.Subjects.Single();
         Assert.Null(subject.Code);
         Assert.Equal(subject.Id, dto.Id);
-    }
-
-    [Fact]
-    public async Task Create_WithTeacher_AssignsTeacher()
-    {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
-        var teacher = AuthUser.CreatePending("Teacher", "t@test.com", "hash", UserRole.Teacher);
-        teacher.Approve();
-        _users.Users.Add(teacher);
-
-        var dto = await _sut.CreateAsync(new SubjectCreateRequest("Mathematics", grade.Id, teacher.Id, Code: "MATH-6"));
-
-        Assert.Equal(teacher.Id, dto.TeacherId);
     }
 
     [Fact]
@@ -95,19 +79,6 @@ public class SubjectServiceTests
     }
 
     [Fact]
-    public async Task Create_WithNonTeacherUser_ThrowsInvalidTeacherException()
-    {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
-        var student = AuthUser.CreatePending("Student", "s@test.com", "hash", UserRole.Student);
-        student.Approve();
-        _users.Users.Add(student);
-
-        await Assert.ThrowsAsync<InvalidTeacherException>(
-            () => _sut.CreateAsync(new SubjectCreateRequest("Mathematics", grade.Id, student.Id)));
-    }
-
-    [Fact]
     public async Task Update_ChangesFields()
     {
         var grade = Grade.Create("Grade 6", "2026");
@@ -137,6 +108,39 @@ public class SubjectServiceTests
     }
 
     [Fact]
+    public async Task Update_MovedToAnotherGrade_SoftDeletesItsSectionTeacherLinks()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        var otherGrade = Grade.Create("Grade 7", "2026");
+        _grades.Grades.Add(grade);
+        _grades.Grades.Add(otherGrade);
+        var subject = Subject.Create("Mathematics", "MATH-6", grade.Id);
+        _subjects.Subjects.Add(subject);
+        var link = SectionSubject.Create(Guid.NewGuid(), subject.Id, Guid.NewGuid());
+        _sectionSubjects.Rows.Add(link);
+
+        await _sut.UpdateAsync(subject.Id, new SubjectUpdateRequest("Mathematics", otherGrade.Id, Code: "MATH-6"));
+
+        // Left live, the link ties the subject to a section of the grade it just left.
+        Assert.True(link.IsDeleted);
+    }
+
+    [Fact]
+    public async Task Update_SameGrade_LeavesSectionTeacherLinksIntact()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        _grades.Grades.Add(grade);
+        var subject = Subject.Create("Mathematics", "MATH-6", grade.Id);
+        _subjects.Subjects.Add(subject);
+        var link = SectionSubject.Create(Guid.NewGuid(), subject.Id, Guid.NewGuid());
+        _sectionSubjects.Rows.Add(link);
+
+        await _sut.UpdateAsync(subject.Id, new SubjectUpdateRequest("Algebra", grade.Id, Code: "ALG-6"));
+
+        Assert.False(link.IsDeleted);
+    }
+
+    [Fact]
     public async Task Update_UnknownId_ThrowsEntityNotFoundException()
     {
         var grade = Grade.Create("Grade 6", "2026");
@@ -160,6 +164,22 @@ public class SubjectServiceTests
     }
 
     [Fact]
+    public async Task Delete_AlsoSoftDeletesItsSectionTeacherLinks()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        _grades.Grades.Add(grade);
+        var subject = Subject.Create("Mathematics", "MATH-6", grade.Id);
+        _subjects.Subjects.Add(subject);
+        var link = SectionSubject.Create(Guid.NewGuid(), subject.Id, Guid.NewGuid());
+        _sectionSubjects.Rows.Add(link);
+
+        await _sut.DeleteAsync(subject.Id);
+
+        // Left live, the link keeps counting as "teacher still assigned" for a subject that is gone.
+        Assert.True(link.IsDeleted);
+    }
+
+    [Fact]
     public async Task Delete_SubjectWithAssignments_ThrowsEntityInUseException()
     {
         var grade = Grade.Create("Grade 6", "2026");
@@ -171,77 +191,6 @@ public class SubjectServiceTests
         await Assert.ThrowsAsync<EntityInUseException>(() => _sut.DeleteAsync(subject.Id));
 
         Assert.False(subject.IsDeleted);
-    }
-
-    [Fact]
-    public async Task AssignTeacher_SetsTeacher()
-    {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
-        var teacher = AuthUser.CreatePending("Teacher", "t@test.com", "hash", UserRole.Teacher);
-        teacher.Approve();
-        _users.Users.Add(teacher);
-        var subject = Subject.Create("Mathematics", "MATH-6", grade.Id);
-        _subjects.Subjects.Add(subject);
-
-        var dto = await _sut.AssignTeacherAsync(subject.Id, teacher.Id);
-
-        Assert.Equal(teacher.Id, subject.TeacherId);
-        Assert.Equal(teacher.Id, dto.TeacherId);
-    }
-
-    [Fact]
-    public async Task AssignTeacher_NonTeacher_ThrowsInvalidTeacherException()
-    {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
-        var student = AuthUser.CreatePending("Student", "s@test.com", "hash", UserRole.Student);
-        student.Approve();
-        _users.Users.Add(student);
-        var subject = Subject.Create("Mathematics", "MATH-6", grade.Id);
-        _subjects.Subjects.Add(subject);
-
-        await Assert.ThrowsAsync<InvalidTeacherException>(
-            () => _sut.AssignTeacherAsync(subject.Id, student.Id));
-    }
-
-    [Fact]
-    public async Task AssignTeacher_PendingTeacher_ThrowsInvalidTeacherException()
-    {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
-        var teacher = AuthUser.CreatePending("Teacher", "t@test.com", "hash", UserRole.Teacher);
-        _users.Users.Add(teacher);
-        var subject = Subject.Create("Mathematics", "MATH-6", grade.Id);
-        _subjects.Subjects.Add(subject);
-
-        await Assert.ThrowsAsync<InvalidTeacherException>(
-            () => _sut.AssignTeacherAsync(subject.Id, teacher.Id));
-    }
-
-    [Fact]
-    public async Task AssignTeacher_UnknownSubject_ThrowsEntityNotFoundException()
-    {
-        var teacher = AuthUser.CreatePending("Teacher", "t@test.com", "hash", UserRole.Teacher);
-        teacher.Approve();
-        _users.Users.Add(teacher);
-
-        await Assert.ThrowsAsync<EntityNotFoundException>(
-            () => _sut.AssignTeacherAsync(Guid.NewGuid(), teacher.Id));
-    }
-
-    [Fact]
-    public async Task UnassignTeacher_ClearsTeacher()
-    {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
-        var subject = Subject.Create("Mathematics", "MATH-6", grade.Id, teacherId: Guid.NewGuid());
-        _subjects.Subjects.Add(subject);
-
-        var dto = await _sut.UnassignTeacherAsync(subject.Id);
-
-        Assert.Null(subject.TeacherId);
-        Assert.Null(dto.TeacherId);
     }
 
     private sealed class FakeSubjectRepository : ISubjectRepository
@@ -274,6 +223,46 @@ public class SubjectServiceTests
             => Task.CompletedTask;
     }
 
+    private sealed class FakeSectionSubjectRepository : ISectionSubjectRepository
+    {
+        public List<SectionSubject> Rows { get; } = new();
+
+        public Task<List<SectionSubject>> GetBySectionAsync(Guid sectionId, CancellationToken ct = default)
+            => Task.FromResult(Rows.Where(r => r.SectionId == sectionId).ToList());
+
+        public Task<SectionSubject?> GetBySectionAndSubjectAsync(Guid sectionId, Guid subjectId, CancellationToken ct = default)
+            => Task.FromResult(Rows.FirstOrDefault(r => r.SectionId == sectionId && r.SubjectId == subjectId));
+
+        public Task AddAsync(SectionSubject sectionSubject, CancellationToken ct = default)
+        {
+            Rows.Add(sectionSubject);
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(SectionSubject sectionSubject, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task SoftDeleteForSectionAsync(Guid sectionId, CancellationToken ct = default)
+        {
+            foreach (var row in Rows.Where(r => r.SectionId == sectionId))
+            {
+                row.Delete();
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public Task SoftDeleteForSubjectAsync(Guid subjectId, CancellationToken ct = default)
+        {
+            foreach (var row in Rows.Where(r => r.SubjectId == subjectId))
+            {
+                row.Delete();
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+
     private sealed class FakeGradeRepository : IGradeRepository
     {
         public List<Grade> Grades { get; } = new();
@@ -296,6 +285,9 @@ public class SubjectServiceTests
         public Task<bool> HasSubjectsAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(false);
 
+        public Task<bool> HasSectionsAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(false);
+
         public Task<bool> HasStudentsAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(false);
 
@@ -306,53 +298,6 @@ public class SubjectServiceTests
         }
 
         public Task UpdateAsync(Grade grade, CancellationToken ct = default)
-            => Task.CompletedTask;
-    }
-
-    private sealed class FakeUserRepository : IUserRepository
-    {
-        public List<AuthUser> Users { get; } = new();
-
-        public Task<AuthUser?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
-
-        public Task<AuthUser?> GetByEmailAsync(string email, CancellationToken ct = default)
-            => Task.FromResult(Users.FirstOrDefault(u => u.Email == email));
-
-        public Task<AuthUser?> GetByRefreshTokenAsync(string refreshToken, CancellationToken ct = default)
-            => Task.FromResult(Users.FirstOrDefault(u => u.RefreshToken == refreshToken));
-
-        public Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default)
-            => Task.FromResult(Users.Any(u => u.Email == email));
-
-        public Task<List<AuthUser>> GetByStatusAsync(AccountStatus status, CancellationToken ct = default)
-            => Task.FromResult(Users.Where(u => u.Status == status).ToList());
-
-        public Task<List<AuthUser>> GetAllAsync(CancellationToken ct = default)
-            => Task.FromResult(Users.ToList());
-
-        public Task<bool> HasAssignedSubjectsAsync(Guid userId, CancellationToken ct = default)
-            => Task.FromResult(false);
-
-        public Task<bool> HasAssignmentsAsync(Guid userId, CancellationToken ct = default)
-            => Task.FromResult(false);
-
-        public Task<bool> HasSubmissionsAsync(Guid userId, CancellationToken ct = default)
-            => Task.FromResult(false);
-
-        public Task<bool> HasGradedSubmissionsAsync(Guid userId, CancellationToken ct = default)
-            => Task.FromResult(false);
-
-        public Task<int> CountUsableAdminsAsync(CancellationToken ct = default)
-            => Task.FromResult(Users.Count(u => u.Role == UserRole.Admin && u.Status == AccountStatus.Approved && u.IsActive));
-
-        public Task AddAsync(AuthUser user, CancellationToken ct = default)
-        {
-            Users.Add(user);
-            return Task.CompletedTask;
-        }
-
-        public Task UpdateAsync(AuthUser user, CancellationToken ct = default)
             => Task.CompletedTask;
     }
 }

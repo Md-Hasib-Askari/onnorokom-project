@@ -13,8 +13,7 @@ namespace AssignmentSystem.Api.Controllers;
 public class AdminSubjectController(
     ISubjectService subjectService,
     IValidator<SubjectCreateRequest> createValidator,
-    IValidator<SubjectUpdateRequest> updateValidator,
-    IValidator<AssignTeacherRequest> assignTeacherValidator) : ControllerBase
+    IValidator<SubjectUpdateRequest> updateValidator) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken ct)
@@ -54,25 +53,5 @@ public class AdminSubjectController(
     {
         await subjectService.DeleteAsync(id, ct);
         return NoContent();
-    }
-
-    [HttpPost("{id}/teacher")]
-    public async Task<IActionResult> AssignTeacher(Guid id, [FromBody] AssignTeacherRequest request, CancellationToken ct)
-    {
-        var validation = await assignTeacherValidator.ValidateAsync(request, ct);
-        if (!validation.IsValid)
-        {
-            throw new ValidationException(validation.Errors);
-        }
-
-        var subject = await subjectService.AssignTeacherAsync(id, request.TeacherId, ct);
-        return Ok(subject);
-    }
-
-    [HttpDelete("{id}/teacher")]
-    public async Task<IActionResult> UnassignTeacher(Guid id, CancellationToken ct)
-    {
-        var subject = await subjectService.UnassignTeacherAsync(id, ct);
-        return Ok(subject);
     }
 }

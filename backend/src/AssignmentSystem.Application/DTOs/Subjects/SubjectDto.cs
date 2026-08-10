@@ -5,6 +5,4 @@ public record SubjectDto(
     string Name,
     string? Code,
     Guid GradeId,
-    string? GradeName,
-    Guid? TeacherId,
-    string? TeacherName);
+    string? GradeName);

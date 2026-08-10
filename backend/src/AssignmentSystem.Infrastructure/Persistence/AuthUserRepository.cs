@@ -46,7 +46,7 @@ public class AuthUserRepository(AppDbContext dbContext) : IUserRepository
 
     public async Task<bool> HasAssignedSubjectsAsync(Guid userId, CancellationToken ct = default)
     {
-        return await dbContext.Subjects.AnyAsync(s => s.TeacherId == userId, ct);
+        return await dbContext.SectionSubjects.AnyAsync(s => s.TeacherId == userId, ct);
     }
 
     public async Task<bool> HasAssignmentsAsync(Guid userId, CancellationToken ct = default)
