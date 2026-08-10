@@ -9,6 +9,15 @@ export const ERROR_MESSAGES = {
 /** Stands in for a table cell whose value is absent, so every table renders the gap alike. */
 export const EMPTY_CELL = "-";
 
+/** Select trigger copy, so every cascading picker reads the same in each of its states. */
+export const SELECT_PLACEHOLDERS = {
+  loading: "Loading...",
+  grade: "Select a grade",
+  section: "Select a section",
+  sectionNeedsGrade: "Select a grade first",
+  sectionNone: "This grade has no sections yet",
+} as const;
+
 /** Form validation copy. Kept next to the error copy so wording stays consistent. */
 export const VALIDATION_MESSAGES = {
   fullNameRequired: "Full name is required.",

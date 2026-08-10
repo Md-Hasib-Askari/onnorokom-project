@@ -12,10 +12,11 @@ import {
   type AdminUserSummary,
 } from "@/lib/api/schemas/admin-users.schema";
 import { AccountStatus, UserRole } from "@/lib/api/schemas/common.schema";
-import { ERROR_MESSAGES } from "@/lib/messages";
+import { ERROR_MESSAGES, SELECT_PLACEHOLDERS } from "@/lib/messages";
 import { AdminUserMutations } from "@/lib/mutations/admin-users.mutations";
 import { AdminGradeQueries } from "@/lib/queries/admin-grades.queries";
 import { AdminSectionQueries } from "@/lib/queries/admin-sections.queries";
+import { SectionSelect } from "@/components/admin/users/section-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,7 +66,6 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
 
   const derivedGradeId = allSections.data?.find((section) => section.id === user?.studentSectionId)?.gradeId;
   const studentGradeId = gradeOverride ?? derivedGradeId;
-  const sections = AdminSectionQueries.useByGrade(studentGradeId);
 
   const form = useForm<AdminUpdateUserRequest>({
     resolver: user ? zodResolver(adminUpdateUserSchemaFor(user.role)) : undefined,
@@ -192,7 +192,11 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
                   >
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder={grades.isLoading ? "Loading..." : "Select a grade"} />
+                        <SelectValue
+                          placeholder={
+                            grades.isLoading ? SELECT_PLACEHOLDERS.loading : SELECT_PLACEHOLDERS.grade
+                          }
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -210,32 +214,11 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Section</FormLabel>
-                      <Select
-                        value={field.value ?? ""}
+                      <SectionSelect
+                        gradeId={studentGradeId}
+                        value={field.value}
                         onValueChange={field.onChange}
-                        disabled={!studentGradeId}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue
-                              placeholder={
-                                !studentGradeId
-                                  ? "Select a grade first"
-                                  : sections.isLoading
-                                    ? "Loading..."
-                                    : "Select a section"
-                              }
-                            />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {sections.data?.map((section) => (
-                            <SelectItem key={section.id} value={section.id}>
-                              {section.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      />
                       <FormMessage />
                     </FormItem>
                   )}

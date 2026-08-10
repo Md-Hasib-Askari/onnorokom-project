@@ -7,10 +7,10 @@ import { z } from "zod";
 import { toast } from "sonner";
 
 import type { AdminUserSummary } from "@/lib/api/schemas/admin-users.schema";
-import { ERROR_MESSAGES, VALIDATION_MESSAGES } from "@/lib/messages";
+import { ERROR_MESSAGES, SELECT_PLACEHOLDERS, VALIDATION_MESSAGES } from "@/lib/messages";
 import type { AdminUserMutations } from "@/lib/mutations/admin-users.mutations";
 import { AdminGradeQueries } from "@/lib/queries/admin-grades.queries";
-import { AdminSectionQueries } from "@/lib/queries/admin-sections.queries";
+import { SectionSelect } from "@/components/admin/users/section-select";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -74,7 +74,6 @@ function ApproveStudentForm({
 }) {
   const [gradeId, setGradeId] = useState<string | undefined>(undefined);
   const grades = AdminGradeQueries.useCurrentYearList();
-  const sections = AdminSectionQueries.useByGrade(gradeId);
 
   const form = useForm<ApproveStudentFormValues>({
     resolver: zodResolver(approveStudentFormSchema),
@@ -125,7 +124,11 @@ function ApproveStudentForm({
             >
               <FormControl>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={grades.isLoading ? "Loading..." : "Select a grade"} />
+                  <SelectValue
+                    placeholder={
+                      grades.isLoading ? SELECT_PLACEHOLDERS.loading : SELECT_PLACEHOLDERS.grade
+                    }
+                  />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
@@ -143,28 +146,11 @@ function ApproveStudentForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Section</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange} disabled={!gradeId}>
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue
-                        placeholder={
-                          !gradeId
-                            ? "Select a grade first"
-                            : sections.isLoading
-                              ? "Loading..."
-                              : "Select a section"
-                        }
-                      />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {sections.data?.map((section) => (
-                      <SelectItem key={section.id} value={section.id}>
-                        {section.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SectionSelect
+                  gradeId={gradeId}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                />
                 <FormMessage />
               </FormItem>
             )}
