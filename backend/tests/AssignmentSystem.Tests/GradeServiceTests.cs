@@ -104,6 +104,18 @@ public class GradeServiceTests
     }
 
     [Fact]
+    public async Task Delete_GradeWithSections_ThrowsEntityInUseException()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        _repo.Grades.Add(grade);
+        _repo.SectionGradeIds.Add(grade.Id);
+
+        await Assert.ThrowsAsync<EntityInUseException>(() => _sut.DeleteAsync(grade.Id));
+
+        Assert.False(grade.IsDeleted);
+    }
+
+    [Fact]
     public async Task Delete_GradeWithEnrolledStudents_ThrowsEntityInUseException()
     {
         var grade = Grade.Create("Grade 6", "2026");
@@ -136,6 +148,7 @@ public class GradeServiceTests
     {
         public List<Grade> Grades { get; } = new();
         public List<Guid> SubjectGradeIds { get; } = new();
+        public List<Guid> SectionGradeIds { get; } = new();
         public List<Guid> StudentGradeIds { get; } = new();
 
         public Task<List<Grade>> GetAllAsync(CancellationToken ct = default)
@@ -155,6 +168,9 @@ public class GradeServiceTests
 
         public Task<bool> HasSubjectsAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(SubjectGradeIds.Contains(id));
+
+        public Task<bool> HasSectionsAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(SectionGradeIds.Contains(id));
 
         public Task<bool> HasStudentsAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(StudentGradeIds.Contains(id));

@@ -10,5 +10,6 @@ public record UserListItemDto(
     AccountStatus Status,
     DateTimeOffset CreatedAt,
     bool IsActive,
-    Guid? StudentGradeId = null,
+    Guid? StudentSectionId = null,
+    string? SectionName = null,
     string? GradeName = null);

@@ -5,8 +5,7 @@ namespace AssignmentSystem.Domain.Entities;
 public class StudentProfile : BaseEntity
 {
     public Guid AuthUserId { get; private set; }
-    public Guid GradeId { get; private set; }
-    public string? Section { get; private set; }
+    public Guid SectionId { get; private set; }
     public string? RollNumber { get; private set; }
     public DateTimeOffset? DateOfBirth { get; private set; }
     public string? Gender { get; private set; }
@@ -16,23 +15,23 @@ public class StudentProfile : BaseEntity
     public DateTimeOffset? AdmissionDate { get; private set; }
 
     public virtual AuthUser? AuthUser { get; private set; }
-    public virtual Grade? Grade { get; private set; }
+    public virtual Section? Section { get; private set; }
 
     private StudentProfile()
     {
     }
 
-    public void ChangeGrade(Guid gradeId)
+    public void ChangeSection(Guid sectionId)
     {
-        GradeId = gradeId;
+        SectionId = sectionId;
     }
 
-    public static StudentProfile Create(Guid authUserId, Guid gradeId)
+    public static StudentProfile Create(Guid authUserId, Guid sectionId)
     {
         return new StudentProfile
         {
             AuthUserId = authUserId,
-            GradeId = gradeId
+            SectionId = sectionId
         };
     }
 }

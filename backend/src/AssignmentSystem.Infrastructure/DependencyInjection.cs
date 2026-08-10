@@ -21,9 +21,12 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, AuthUserRepository>();
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<IGradeRepository, GradeRepository>();
+        services.AddScoped<ISectionRepository, SectionRepository>();
         services.AddScoped<ISubjectRepository, SubjectRepository>();
+        services.AddScoped<ISectionSubjectRepository, SectionSubjectRepository>();
         services.AddScoped<IAssignmentRepository, AssignmentRepository>();
         services.AddScoped<ISubmissionRepository, SubmissionRepository>();
+        services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<ITokenService, TokenService>();

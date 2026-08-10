@@ -11,7 +11,7 @@ namespace AssignmentSystem.Application.Services;
 public class AdminUserService(
     IUserRepository userRepository,
     IProfileRepository profileRepository,
-    IGradeRepository gradeRepository,
+    ISectionRepository sectionRepository,
     IPasswordHasher passwordHasher,
     ITransactionService transactionService,
     ICurrentUser currentUser,
@@ -20,12 +20,12 @@ public class AdminUserService(
     public async Task<List<UserListItemDto>> GetAllUsersAsync(CancellationToken ct = default)
     {
         var users = await userRepository.GetAllAsync(ct);
-        return await UserListItemDtoFactory.BuildAsync(users, profileRepository, gradeRepository, ct);
+        return await UserListItemDtoFactory.BuildAsync(users, profileRepository, sectionRepository, ct);
     }
 
     private async Task<UserListItemDto> BuildDtoAsync(AuthUser user, CancellationToken ct)
     {
-        var dtos = await UserListItemDtoFactory.BuildAsync([user], profileRepository, gradeRepository, ct);
+        var dtos = await UserListItemDtoFactory.BuildAsync([user], profileRepository, sectionRepository, ct);
         return dtos[0];
     }
 
@@ -38,14 +38,14 @@ public class AdminUserService(
             throw new DuplicateEmailException(email);
         }
 
-        await UserGuards.EnsureStudentGradeValidAsync(gradeRepository, request.Role, request.StudentGradeId, ct);
+        await UserGuards.EnsureStudentSectionValidAsync(sectionRepository, request.Role, request.StudentSectionId, ct);
 
         var user = AuthUser.CreatePending(request.FullName, email, passwordHasher.Hash(request.Password), request.Role);
         user.Approve();
         await transactionService.ExecuteAsync(async transactionCt =>
         {
             await userRepository.AddAsync(user, transactionCt);
-            await profileProvisioningService.CreateProfileAsync(user, request.StudentGradeId, transactionCt);
+            await profileProvisioningService.CreateProfileAsync(user, request.StudentSectionId, transactionCt);
         }, ct);
 
         return await BuildDtoAsync(user, ct);
@@ -62,7 +62,7 @@ public class AdminUserService(
             throw new DuplicateEmailException(email);
         }
 
-        await UserGuards.EnsureStudentGradeValidAsync(gradeRepository, user.Role, request.StudentGradeId, ct);
+        await UserGuards.EnsureStudentSectionValidAsync(sectionRepository, user.Role, request.StudentSectionId, ct);
 
         if (request.Status == AccountStatus.Pending)
         {
@@ -139,7 +139,7 @@ public class AdminUserService(
                 await UpdateTeacherProfileAsync(user, request.TeacherProfile, ct);
                 break;
             case UserRole.Student:
-                await UpdateStudentProfileAsync(user, request.StudentGradeId, ct);
+                await UpdateStudentProfileAsync(user, request.StudentSectionId, ct);
                 break;
             case UserRole.Admin:
                 await UpdateAdminProfileAsync(user, request.AdminProfile, ct);
@@ -147,16 +147,16 @@ public class AdminUserService(
         }
     }
 
-    private async Task UpdateStudentProfileAsync(AuthUser user, Guid? studentGradeId, CancellationToken ct)
+    private async Task UpdateStudentProfileAsync(AuthUser user, Guid? studentSectionId, CancellationToken ct)
     {
         var studentProfile = await profileRepository.GetStudentByUserIdAsync(user.Id, ct);
         if (studentProfile is null)
         {
-            await profileRepository.AddAsync(StudentProfile.Create(user.Id, studentGradeId!.Value), ct);
+            await profileRepository.AddAsync(StudentProfile.Create(user.Id, studentSectionId!.Value), ct);
         }
         else
         {
-            studentProfile.ChangeGrade(studentGradeId!.Value);
+            studentProfile.ChangeSection(studentSectionId!.Value);
             await profileRepository.UpdateAsync(studentProfile, ct);
         }
     }

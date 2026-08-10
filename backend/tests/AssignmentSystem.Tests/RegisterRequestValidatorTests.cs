@@ -37,24 +37,40 @@ public class RegisterRequestValidatorTests
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(RegisterRequest.Password));
     }
 
+    /// <summary>
+    /// Sign-up never carries a section: the approving admin picks it, so a section-less student
+    /// payload is well formed here. Whether the role is actually open is an admin setting checked
+    /// in the service, not a validation rule.
+    /// </summary>
     [Fact]
-    public void Validate_StudentWithoutGrade_Fails()
+    public void Validate_StudentWithoutSection_Passes()
     {
         var request = new RegisterRequest("Student One", "student@test.com", "StrongPass1!", UserRole.Student);
 
         var result = _validator.Validate(request);
 
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == nameof(RegisterRequest.StudentGradeId));
+        Assert.True(result.IsValid);
     }
 
     [Fact]
-    public void Validate_StudentWithGrade_Passes()
+    public void Validate_AdminRole_Fails()
     {
-        var request = new RegisterRequest("Student One", "student@test.com", "StrongPass1!", UserRole.Student, Guid.NewGuid());
+        var request = new RegisterRequest("Admin One", "admin@test.com", "StrongPass1!", UserRole.Admin);
 
         var result = _validator.Validate(request);
 
-        Assert.True(result.IsValid);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(RegisterRequest.Role));
+    }
+
+    [Fact]
+    public void Validate_UnknownRole_Fails()
+    {
+        var request = new RegisterRequest("Someone", "someone@test.com", "StrongPass1!", (UserRole)99);
+
+        var result = _validator.Validate(request);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(RegisterRequest.Role));
     }
 }

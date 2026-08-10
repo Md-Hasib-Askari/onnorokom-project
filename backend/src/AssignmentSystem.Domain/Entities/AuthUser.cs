@@ -8,7 +8,7 @@ public class AuthUser : BaseEntity
     public string FullName { get; private set; } = null!;
     public string Email { get; private set; } = null!;
     public string PasswordHash { get; private set; } = null!;
-    public UserRole Role { get; private set; }
+    public UserRole Role { get; private init; }
     public AccountStatus Status { get; private set; } = AccountStatus.Pending;
     public bool IsActive { get; private set; } = true;
     public string? RefreshToken { get; private set; }

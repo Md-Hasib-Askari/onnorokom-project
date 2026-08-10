@@ -29,8 +29,8 @@ public class UserCreateRequestValidator : AbstractValidator<UserCreateRequest>
         RuleFor(x => x.Role)
             .IsInEnum().WithMessage("Invalid role.");
 
-        RuleFor(x => x.StudentGradeId)
-            .NotNull().WithMessage("A grade is required for student users.")
+        RuleFor(x => x.StudentSectionId)
+            .NotNull().WithMessage("A section is required for student users.")
             .When(x => x.Role == UserRole.Student);
     }
 }

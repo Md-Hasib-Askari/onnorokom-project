@@ -26,12 +26,10 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .Matches("[0-9]").WithMessage("Password must contain at least one digit.")
             .Matches("[^A-Za-z0-9]").WithMessage("Password must contain at least one special character.");
 
+        // Whether Teacher and Student are actually open is an admin-controlled setting enforced in
+        // AuthService; only the Admin role is barred unconditionally, so it stays in the validator.
         RuleFor(x => x.Role)
             .IsInEnum().WithMessage("Invalid role.")
             .NotEqual(UserRole.Admin).WithMessage("Public registration is not allowed for the Admin role.");
-
-        RuleFor(x => x.StudentGradeId)
-            .NotNull().WithMessage("A grade is required for student users.")
-            .When(x => x.Role == UserRole.Student);
     }
 }

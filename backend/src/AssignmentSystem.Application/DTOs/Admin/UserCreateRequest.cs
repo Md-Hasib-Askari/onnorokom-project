@@ -7,4 +7,4 @@ public record UserCreateRequest(
     string Email,
     string Password,
     UserRole Role,
-    Guid? StudentGradeId = null);
+    Guid? StudentSectionId = null);

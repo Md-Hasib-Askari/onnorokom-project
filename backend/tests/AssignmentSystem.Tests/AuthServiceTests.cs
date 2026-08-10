@@ -1,6 +1,7 @@
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.DTOs.Auth;
+using AssignmentSystem.Application.DTOs.Settings;
 using AssignmentSystem.Application.Services;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
@@ -11,22 +12,31 @@ public class AuthServiceTests
 {
     private readonly FakeUserRepository _repo = new();
     private readonly FakeProfileRepository _profiles = new();
-    private readonly FakeGradeRepository _grades = new();
+    private readonly FakeSectionRepository _sections = new();
     private readonly FakePasswordHasher _hasher = new();
     private readonly FakeTokenService _tokens = new();
+    private readonly FakeSystemSettingService _settings = new();
     private readonly AuthService _sut;
 
     public AuthServiceTests()
     {
-        _sut = new AuthService(_repo, _grades, _profiles, _hasher, _tokens, new FakeTransactionService(), new ProfileProvisioningService(_profiles));
+        _sut = new AuthService(
+            _repo, _sections, _profiles, _hasher, _tokens, new FakeTransactionService(),
+            new ProfileProvisioningService(_profiles), _settings);
+    }
+
+    private Section AddSection(string name = "Section A")
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        var section = Section.Create(name, grade.Id);
+        _sections.Sections.Add(section);
+        return section;
     }
 
     [Fact]
     public async Task Register_CreatesPendingUserWithHashedPassword()
     {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
-        var request = new RegisterRequest("Student One", "student1@test.com", "secret123", UserRole.Student, grade.Id);
+        var request = new RegisterRequest("Student One", "student1@test.com", "secret123", UserRole.Student);
 
         var user = await _sut.RegisterAsync(request);
 
@@ -35,16 +45,22 @@ public class AuthServiceTests
         Assert.Equal("HASH:secret123", user.PasswordHash);
         Assert.Equal(AccountStatus.Pending, user.Status);
         Assert.True(user.IsActive);
-        Assert.Single(_profiles.StudentProfiles);
-        Assert.Equal(grade.Id, _profiles.StudentProfiles[0].GradeId);
+    }
+
+    [Fact]
+    public async Task Register_Student_DefersProfileUntilAdminAssignsSection()
+    {
+        var request = new RegisterRequest("Student One", "student1@test.com", "secret123", UserRole.Student);
+
+        await _sut.RegisterAsync(request);
+
+        Assert.Empty(_profiles.StudentProfiles);
     }
 
     [Fact]
     public async Task Register_NormalizesEmailToLowerCase()
     {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
-        var request = new RegisterRequest("Student One", "  Student1@Test.com ", "secret123", UserRole.Student, grade.Id);
+        var request = new RegisterRequest("Student One", "  Student1@Test.com ", "secret123", UserRole.Student);
 
         var user = await _sut.RegisterAsync(request);
 
@@ -61,24 +77,41 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task Register_StudentWithoutGrade_ThrowsDomainExceptionAndCreatesNothing()
+    public async Task Register_StudentWhenSelfRegistrationClosed_ThrowsAndCreatesNothing()
     {
+        _settings.StudentSelfRegistrationEnabled = false;
         var request = new RegisterRequest("Student One", "student1@test.com", "secret123", UserRole.Student);
 
-        await Assert.ThrowsAsync<DomainException>(() => _sut.RegisterAsync(request));
+        await Assert.ThrowsAsync<RegistrationDisabledException>(() => _sut.RegisterAsync(request));
 
         Assert.Empty(_repo.Users);
         Assert.Empty(_profiles.StudentProfiles);
     }
 
     [Fact]
-    public async Task Register_StudentWithUnknownGrade_ThrowsEntityNotFoundException()
+    public async Task Register_TeacherWhenSelfRegistrationClosed_ThrowsAndCreatesNothing()
     {
-        var request = new RegisterRequest("Student One", "student1@test.com", "secret123", UserRole.Student, Guid.NewGuid());
+        _settings.TeacherSelfRegistrationEnabled = false;
+        var request = new RegisterRequest("Teacher One", "teacher1@test.com", "secret123", UserRole.Teacher);
 
-        await Assert.ThrowsAsync<EntityNotFoundException>(() => _sut.RegisterAsync(request));
+        await Assert.ThrowsAsync<RegistrationDisabledException>(() => _sut.RegisterAsync(request));
 
         Assert.Empty(_repo.Users);
+        Assert.Empty(_profiles.TeacherProfiles);
+    }
+
+    /// <summary>
+    /// The policy gate runs before the email lookup, so a closed role cannot be used to probe which
+    /// addresses already exist.
+    /// </summary>
+    [Fact]
+    public async Task Register_ClosedRoleWithTakenEmail_ReportsClosureNotDuplicate()
+    {
+        _settings.TeacherSelfRegistrationEnabled = false;
+        _repo.Users.Add(CreateUser(email: "existing@test.com"));
+        var request = new RegisterRequest("Teacher One", "existing@test.com", "secret123", UserRole.Teacher);
+
+        await Assert.ThrowsAsync<RegistrationDisabledException>(() => _sut.RegisterAsync(request));
     }
 
     [Fact]
@@ -93,16 +126,19 @@ public class AuthServiceTests
         Assert.Equal(user.Id, _profiles.TeacherProfiles[0].AuthUserId);
     }
 
+    /// <summary>
+    /// No setting can open the Admin role to public sign-up, so the service refuses it even with
+    /// both toggles on.
+    /// </summary>
     [Fact]
-    public async Task Register_Admin_CreatesAdminProfile()
+    public async Task Register_Admin_ThrowsRegistrationDisabledException()
     {
         var request = new RegisterRequest("Admin One", "admin1@test.com", "secret123", UserRole.Admin);
 
-        var user = await _sut.RegisterAsync(request);
+        await Assert.ThrowsAsync<RegistrationDisabledException>(() => _sut.RegisterAsync(request));
 
-        Assert.Equal(UserRole.Admin, user.Role);
-        Assert.Single(_profiles.AdminProfiles);
-        Assert.Equal(user.Id, _profiles.AdminProfiles[0].AuthUserId);
+        Assert.Empty(_repo.Users);
+        Assert.Empty(_profiles.AdminProfiles);
     }
 
     [Fact]
@@ -232,12 +268,82 @@ public class AuthServiceTests
     [Fact]
     public async Task Approve_ApproveSetsStatusApproved()
     {
+        var section = AddSection();
         var user = CreateUser(email: "pending@test.com", status: AccountStatus.Pending);
+        _repo.Users.Add(user);
+
+        var result = await _sut.ApproveAsync(user.Id, true, section.Id);
+
+        Assert.Equal(AccountStatus.Approved, result.Status);
+    }
+
+    [Fact]
+    public async Task Approve_Student_EnrolsIntoTheSectionTheAdminChose()
+    {
+        var section = AddSection();
+        var user = CreateUser(email: "pending@test.com", status: AccountStatus.Pending);
+        _repo.Users.Add(user);
+
+        await _sut.ApproveAsync(user.Id, true, section.Id);
+
+        var profile = Assert.Single(_profiles.StudentProfiles);
+        Assert.Equal(user.Id, profile.AuthUserId);
+        Assert.Equal(section.Id, profile.SectionId);
+    }
+
+    [Fact]
+    public async Task Approve_StudentWithoutSection_ThrowsDomainExceptionAndLeavesUserPending()
+    {
+        var user = CreateUser(email: "pending@test.com", status: AccountStatus.Pending);
+        _repo.Users.Add(user);
+
+        await Assert.ThrowsAsync<DomainException>(() => _sut.ApproveAsync(user.Id, true));
+
+        Assert.Equal(AccountStatus.Pending, user.Status);
+        Assert.Empty(_profiles.StudentProfiles);
+    }
+
+    [Fact]
+    public async Task Approve_StudentWithUnknownSection_ThrowsEntityNotFoundException()
+    {
+        var user = CreateUser(email: "pending@test.com", status: AccountStatus.Pending);
+        _repo.Users.Add(user);
+
+        await Assert.ThrowsAsync<EntityNotFoundException>(
+            () => _sut.ApproveAsync(user.Id, true, Guid.NewGuid()));
+
+        Assert.Equal(AccountStatus.Pending, user.Status);
+        Assert.Empty(_profiles.StudentProfiles);
+    }
+
+    /// <summary>
+    /// An admin-created student already has a section, so approval must not need one and must not
+    /// add a second profile.
+    /// </summary>
+    [Fact]
+    public async Task Approve_StudentWithExistingProfile_NeedsNoSection()
+    {
+        var section = AddSection();
+        var user = CreateUser(email: "pending@test.com", status: AccountStatus.Pending);
+        _repo.Users.Add(user);
+        _profiles.StudentProfiles.Add(StudentProfile.Create(user.Id, section.Id));
+
+        var result = await _sut.ApproveAsync(user.Id, true);
+
+        Assert.Equal(AccountStatus.Approved, result.Status);
+        Assert.Single(_profiles.StudentProfiles);
+    }
+
+    [Fact]
+    public async Task Approve_Teacher_NeedsNoSection()
+    {
+        var user = AuthUser.CreatePending("Teacher", "teacher@test.com", "hash", UserRole.Teacher);
         _repo.Users.Add(user);
 
         var result = await _sut.ApproveAsync(user.Id, true);
 
         Assert.Equal(AccountStatus.Approved, result.Status);
+        Assert.Empty(_profiles.StudentProfiles);
     }
 
     [Fact]
@@ -254,10 +360,11 @@ public class AuthServiceTests
     [Fact]
     public async Task Approve_RejectedUser_SetsStatusApproved()
     {
+        var section = AddSection();
         var user = CreateUser(email: "rejected@test.com", status: AccountStatus.Rejected);
         _repo.Users.Add(user);
 
-        var result = await _sut.ApproveAsync(user.Id, true);
+        var result = await _sut.ApproveAsync(user.Id, true, section.Id);
 
         Assert.Equal(AccountStatus.Approved, result.Status);
     }
@@ -325,19 +432,18 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task GetPendingUsers_IncludesGradeInfoForPendingStudents()
+    public async Task GetPendingUsers_IncludesSectionInfoForPendingStudents()
     {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
+        var section = AddSection();
         var student = CreateUser(email: "pending-student@test.com", status: AccountStatus.Pending);
         _repo.Users.Add(student);
-        _profiles.StudentProfiles.Add(StudentProfile.Create(student.Id, grade.Id));
+        _profiles.StudentProfiles.Add(StudentProfile.Create(student.Id, section.Id));
 
         var pending = await _sut.GetPendingUsersAsync();
 
         var dto = Assert.Single(pending);
-        Assert.Equal(grade.Id, dto.StudentGradeId);
-        Assert.Equal(grade.Name, dto.GradeName);
+        Assert.Equal(section.Id, dto.StudentSectionId);
+        Assert.Equal(section.Name, dto.SectionName);
     }
 
     private static AuthUser CreateUser(string email, AccountStatus status = AccountStatus.Pending, string password = "secret123")
@@ -458,38 +564,35 @@ public class AuthServiceTests
         }
     }
 
-    private sealed class FakeGradeRepository : IGradeRepository
+    private sealed class FakeSectionRepository : ISectionRepository
     {
-        public List<Grade> Grades { get; } = new();
+        public List<Section> Sections { get; } = new();
 
-        public Task<List<Grade>> GetAllAsync(CancellationToken ct = default)
-            => Task.FromResult(Grades.ToList());
+        public Task<List<Section>> GetAllAsync(CancellationToken ct = default)
+            => Task.FromResult(Sections.ToList());
 
-        public Task<Grade?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => Task.FromResult(Grades.FirstOrDefault(g => g.Id == id));
+        public Task<Section?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(Sections.FirstOrDefault(s => s.Id == id));
 
-        public Task<List<Grade>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
-            => Task.FromResult(Grades.Where(g => ids.Contains(g.Id)).ToList());
+        public Task<List<Section>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+            => Task.FromResult(Sections.Where(s => ids.Contains(s.Id)).ToList());
 
         public Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
-            => Task.FromResult(Grades.Any(g => g.Id == id));
+            => Task.FromResult(Sections.Any(s => s.Id == id));
 
-        public Task<bool> ExistsAsync(string name, string academicYear, CancellationToken ct = default)
-            => Task.FromResult(Grades.Any(g => g.Name == name && g.AcademicYear == academicYear));
-
-        public Task<bool> HasSubjectsAsync(Guid id, CancellationToken ct = default)
-            => Task.FromResult(false);
+        public Task<bool> ExistsByNameAsync(string name, Guid gradeId, CancellationToken ct = default)
+            => Task.FromResult(Sections.Any(s => s.Name == name && s.GradeId == gradeId));
 
         public Task<bool> HasStudentsAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(false);
 
-        public Task AddAsync(Grade grade, CancellationToken ct = default)
+        public Task AddAsync(Section section, CancellationToken ct = default)
         {
-            Grades.Add(grade);
+            Sections.Add(section);
             return Task.CompletedTask;
         }
 
-        public Task UpdateAsync(Grade grade, CancellationToken ct = default)
+        public Task UpdateAsync(Section section, CancellationToken ct = default)
             => Task.CompletedTask;
     }
 
@@ -505,6 +608,40 @@ public class AuthServiceTests
     {
         public Task ExecuteAsync(Func<CancellationToken, Task> work, CancellationToken ct = default)
             => work(ct);
+    }
+
+    /// <summary>
+    /// Both roles start open so the tests that are not about the policy do not have to enable it.
+    /// The gate itself is exercised by flipping a flag before calling the SUT.
+    /// </summary>
+    private sealed class FakeSystemSettingService : ISystemSettingService
+    {
+        public bool TeacherSelfRegistrationEnabled { get; set; } = true;
+        public bool StudentSelfRegistrationEnabled { get; set; } = true;
+
+        public Task<RegistrationPolicyDto> GetRegistrationPolicyAsync(CancellationToken ct = default)
+            => Task.FromResult(new RegistrationPolicyDto(
+                TeacherSelfRegistrationEnabled, StudentSelfRegistrationEnabled));
+
+        public Task<RegistrationPolicyDto> UpdateRegistrationPolicyAsync(
+            RegistrationPolicyUpdateRequest request, CancellationToken ct = default)
+        {
+            TeacherSelfRegistrationEnabled = request.TeacherSelfRegistrationEnabled;
+            StudentSelfRegistrationEnabled = request.StudentSelfRegistrationEnabled;
+            return GetRegistrationPolicyAsync(ct);
+        }
+
+        public Task EnsureSelfRegistrationAllowedAsync(UserRole role, CancellationToken ct = default)
+        {
+            var allowed = role switch
+            {
+                UserRole.Teacher => TeacherSelfRegistrationEnabled,
+                UserRole.Student => StudentSelfRegistrationEnabled,
+                _ => false
+            };
+
+            return allowed ? Task.CompletedTask : throw new RegistrationDisabledException(role);
+        }
     }
 
     private sealed class FakeTokenService : ITokenService

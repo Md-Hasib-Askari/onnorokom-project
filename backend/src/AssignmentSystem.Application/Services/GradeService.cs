@@ -45,6 +45,11 @@ public class GradeService(IGradeRepository gradeRepository, IMapper mapper) : IG
             throw new EntityInUseException($"Grade '{grade.Name}' cannot be deleted because it has subjects assigned.");
         }
 
+        if (await gradeRepository.HasSectionsAsync(id, ct))
+        {
+            throw new EntityInUseException($"Grade '{grade.Name}' cannot be deleted because it has sections.");
+        }
+
         if (await gradeRepository.HasStudentsAsync(id, ct))
         {
             throw new EntityInUseException($"Grade '{grade.Name}' cannot be deleted because it has enrolled students.");

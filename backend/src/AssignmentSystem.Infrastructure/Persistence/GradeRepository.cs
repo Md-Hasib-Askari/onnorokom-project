@@ -19,16 +19,6 @@ public class GradeRepository(AppDbContext dbContext) : IGradeRepository
         return await dbContext.Grades.FirstOrDefaultAsync(g => g.Id == id, ct);
     }
 
-    public async Task<List<Grade>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
-    {
-        return await dbContext.Grades.Where(g => ids.Contains(g.Id)).ToListAsync(ct);
-    }
-
-    public async Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
-    {
-        return await dbContext.Grades.AnyAsync(g => g.Id == id, ct);
-    }
-
     public async Task<bool> ExistsAsync(string name, string academicYear, CancellationToken ct = default)
     {
         return await dbContext.Grades.AnyAsync(g => g.Name == name && g.AcademicYear == academicYear, ct);
@@ -39,9 +29,14 @@ public class GradeRepository(AppDbContext dbContext) : IGradeRepository
         return await dbContext.Subjects.AnyAsync(s => s.GradeId == id, ct);
     }
 
+    public async Task<bool> HasSectionsAsync(Guid id, CancellationToken ct = default)
+    {
+        return await dbContext.Sections.AnyAsync(s => s.GradeId == id, ct);
+    }
+
     public async Task<bool> HasStudentsAsync(Guid id, CancellationToken ct = default)
     {
-        return await dbContext.StudentProfiles.AnyAsync(s => s.GradeId == id, ct);
+        return await dbContext.StudentProfiles.AnyAsync(s => s.Section!.GradeId == id, ct);
     }
 
     public async Task AddAsync(Grade grade, CancellationToken ct = default)

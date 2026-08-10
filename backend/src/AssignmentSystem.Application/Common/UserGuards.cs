@@ -6,10 +6,10 @@ namespace AssignmentSystem.Application.Common;
 
 public static class UserGuards
 {
-    public static async Task EnsureStudentGradeValidAsync(
-        IGradeRepository gradeRepository,
+    public static async Task EnsureStudentSectionValidAsync(
+        ISectionRepository sectionRepository,
         UserRole role,
-        Guid? studentGradeId,
+        Guid? studentSectionId,
         CancellationToken ct)
     {
         if (role != UserRole.Student)
@@ -17,14 +17,14 @@ public static class UserGuards
             return;
         }
 
-        if (studentGradeId is null)
+        if (studentSectionId is null)
         {
-            throw new DomainException("A grade is required for student users.");
+            throw new DomainException("A section is required for student users.");
         }
 
-        if (!await gradeRepository.ExistsAsync(studentGradeId.Value, ct))
+        if (!await sectionRepository.ExistsAsync(studentSectionId.Value, ct))
         {
-            throw new EntityNotFoundException($"Grade with id {studentGradeId} was not found.");
+            throw new EntityNotFoundException($"Section with id {studentSectionId} was not found.");
         }
     }
 

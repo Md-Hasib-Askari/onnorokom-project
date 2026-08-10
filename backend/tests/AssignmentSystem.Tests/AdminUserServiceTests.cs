@@ -11,35 +11,42 @@ public class AdminUserServiceTests
 {
     private readonly FakeUserRepository _users = new();
     private readonly FakeProfileRepository _profiles = new();
-    private readonly FakeGradeRepository _grades = new();
+    private readonly FakeSectionRepository _sections = new();
     private readonly FakePasswordHasher _hasher = new();
     private readonly FakeCurrentUser _currentUser = new();
     private readonly AdminUserService _sut;
 
     public AdminUserServiceTests()
     {
-        _sut = new AdminUserService(_users, _profiles, _grades, _hasher, new FakeTransactionService(), _currentUser, new ProfileProvisioningService(_profiles));
+        _sut = new AdminUserService(_users, _profiles, _sections, _hasher, new FakeTransactionService(), _currentUser, new ProfileProvisioningService(_profiles));
+    }
+
+    private Section AddSection(string name = "Section A")
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        var section = Section.Create(name, grade.Id);
+        _sections.Sections.Add(section);
+        return section;
     }
 
     [Fact]
-    public async Task Create_StudentWithGrade_IsApprovedAndProfileCreated()
+    public async Task Create_StudentWithSection_IsApprovedAndProfileCreated()
     {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
+        var section = AddSection();
 
-        var dto = await _sut.CreateUserAsync(new("Student One", "student@test.com", "Secret@123", UserRole.Student, grade.Id));
+        var dto = await _sut.CreateUserAsync(new("Student One", "student@test.com", "Secret@123", UserRole.Student, section.Id));
 
         var user = _users.Users.Single();
         Assert.Equal(AccountStatus.Approved, user.Status);
         Assert.Equal("HASH:Secret@123", user.PasswordHash);
         Assert.Single(_profiles.StudentProfiles);
         Assert.Equal(user.Id, _profiles.StudentProfiles[0].AuthUserId);
-        Assert.Equal(grade.Id, _profiles.StudentProfiles[0].GradeId);
+        Assert.Equal(section.Id, _profiles.StudentProfiles[0].SectionId);
         Assert.Equal(user.Id, dto.Id);
     }
 
     [Fact]
-    public async Task Create_StudentWithoutGrade_ThrowsDomainExceptionAndNoProfile()
+    public async Task Create_StudentWithoutSection_ThrowsDomainExceptionAndNoProfile()
     {
         await Assert.ThrowsAsync<DomainException>(
             () => _sut.CreateUserAsync(new("Student One", "student@test.com", "Secret@123", UserRole.Student)));
@@ -81,7 +88,7 @@ public class AdminUserServiceTests
     }
 
     [Fact]
-    public async Task Create_StudentWithUnknownGrade_ThrowsEntityNotFoundException()
+    public async Task Create_StudentWithUnknownSection_ThrowsEntityNotFoundException()
     {
         await Assert.ThrowsAsync<EntityNotFoundException>(
             () => _sut.CreateUserAsync(new("Student One", "student@test.com", "Secret@123", UserRole.Student, Guid.NewGuid())));
@@ -93,13 +100,12 @@ public class AdminUserServiceTests
     [Fact]
     public async Task Update_ChangesDetailsStatusAndActivity()
     {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
+        var section = AddSection();
         var user = AuthUser.CreatePending("Old Name", "old@test.com", "hash", UserRole.Student);
         user.Approve();
         _users.Users.Add(user);
 
-        var dto = await _sut.UpdateUserAsync(user.Id, new("New Name", "new@test.com", AccountStatus.Approved, true, grade.Id));
+        var dto = await _sut.UpdateUserAsync(user.Id, new("New Name", "new@test.com", AccountStatus.Approved, true, section.Id));
 
         Assert.Equal("New Name", user.FullName);
         Assert.Equal("new@test.com", user.Email);
@@ -125,13 +131,12 @@ public class AdminUserServiceTests
     [Fact]
     public async Task Update_RejectedStatus_SetsRejected()
     {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
+        var section = AddSection();
         var user = AuthUser.CreatePending("Name", "a@test.com", "hash", UserRole.Student);
         user.Approve();
         _users.Users.Add(user);
 
-        await _sut.UpdateUserAsync(user.Id, new("Name", "a@test.com", AccountStatus.Rejected, true, grade.Id));
+        await _sut.UpdateUserAsync(user.Id, new("Name", "a@test.com", AccountStatus.Rejected, true, section.Id));
 
         Assert.Equal(AccountStatus.Rejected, user.Status);
     }
@@ -214,7 +219,7 @@ public class AdminUserServiceTests
     }
 
     [Fact]
-    public async Task Update_StudentWithoutGrade_ThrowsDomainExceptionAndKeepsUserUnchanged()
+    public async Task Update_StudentWithoutSection_ThrowsDomainExceptionAndKeepsUserUnchanged()
     {
         var user = AuthUser.CreatePending("Student", "s@test.com", "hash", UserRole.Student);
         user.Approve();
@@ -242,42 +247,39 @@ public class AdminUserServiceTests
     }
 
     [Fact]
-    public async Task Update_StudentWithGrade_CreatesStudentProfile()
+    public async Task Update_StudentWithSection_CreatesStudentProfile()
     {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
+        var section = AddSection();
         var user = AuthUser.CreatePending("Student", "s@test.com", "hash", UserRole.Student);
         user.Approve();
         _users.Users.Add(user);
 
-        await _sut.UpdateUserAsync(user.Id, new("Student", "s@test.com", AccountStatus.Approved, true, grade.Id));
+        await _sut.UpdateUserAsync(user.Id, new("Student", "s@test.com", AccountStatus.Approved, true, section.Id));
 
         var profile = _profiles.StudentProfiles.Single();
         Assert.Equal(user.Id, profile.AuthUserId);
-        Assert.Equal(grade.Id, profile.GradeId);
+        Assert.Equal(section.Id, profile.SectionId);
     }
 
     [Fact]
-    public async Task Update_StudentGradeChange_UpdatesExistingProfile()
+    public async Task Update_StudentSectionChange_UpdatesExistingProfile()
     {
-        var gradeA = Grade.Create("Grade 6", "2026");
-        var gradeB = Grade.Create("Grade 7", "2026");
-        _grades.Grades.Add(gradeA);
-        _grades.Grades.Add(gradeB);
+        var sectionA = AddSection("Section A");
+        var sectionB = AddSection("Section B");
         var user = AuthUser.CreatePending("Student", "s@test.com", "hash", UserRole.Student);
         user.Approve();
         _users.Users.Add(user);
-        var profile = StudentProfile.Create(user.Id, gradeA.Id);
+        var profile = StudentProfile.Create(user.Id, sectionA.Id);
         _profiles.StudentProfiles.Add(profile);
 
-        await _sut.UpdateUserAsync(user.Id, new("Student", "s@test.com", AccountStatus.Approved, true, gradeB.Id));
+        await _sut.UpdateUserAsync(user.Id, new("Student", "s@test.com", AccountStatus.Approved, true, sectionB.Id));
 
         Assert.Single(_profiles.StudentProfiles);
-        Assert.Equal(gradeB.Id, profile.GradeId);
+        Assert.Equal(sectionB.Id, profile.SectionId);
     }
 
     [Fact]
-    public async Task Update_StudentWithUnknownGrade_ThrowsAndKeepsUserUnchanged()
+    public async Task Update_StudentWithUnknownSection_ThrowsAndKeepsUserUnchanged()
     {
         var user = AuthUser.CreatePending("Student", "s@test.com", "hash", UserRole.Student);
         user.Approve();
@@ -443,12 +445,11 @@ public class AdminUserServiceTests
     [Fact]
     public async Task Delete_SoftDeletesUserProfile()
     {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
+        var section = AddSection();
         var user = AuthUser.CreatePending("Student", "s@test.com", "hash", UserRole.Student);
         user.Approve();
         _users.Users.Add(user);
-        var profile = StudentProfile.Create(user.Id, grade.Id);
+        var profile = StudentProfile.Create(user.Id, section.Id);
         _profiles.StudentProfiles.Add(profile);
 
         await _sut.DeleteUserAsync(user.Id);
@@ -570,14 +571,13 @@ public class AdminUserServiceTests
     }
 
     [Fact]
-    public async Task GetAllUsers_IncludesIsActiveAndStudentGrade()
+    public async Task GetAllUsers_IncludesIsActiveAndStudentSection()
     {
-        var grade = Grade.Create("Grade 6", "2026");
-        _grades.Grades.Add(grade);
+        var section = AddSection();
         var student = AuthUser.CreatePending("Student One", "student@test.com", "hash", UserRole.Student);
         student.Approve();
         _users.Users.Add(student);
-        _profiles.StudentProfiles.Add(StudentProfile.Create(student.Id, grade.Id));
+        _profiles.StudentProfiles.Add(StudentProfile.Create(student.Id, section.Id));
 
         var teacher = AuthUser.CreatePending("Teacher One", "teacher@test.com", "hash", UserRole.Teacher);
         teacher.Approve();
@@ -588,13 +588,13 @@ public class AdminUserServiceTests
 
         var studentDto = users.Single(u => u.Id == student.Id);
         Assert.True(studentDto.IsActive);
-        Assert.Equal(grade.Id, studentDto.StudentGradeId);
-        Assert.Equal("Grade 6", studentDto.GradeName);
+        Assert.Equal(section.Id, studentDto.StudentSectionId);
+        Assert.Equal("Section A", studentDto.SectionName);
 
         var teacherDto = users.Single(u => u.Id == teacher.Id);
         Assert.False(teacherDto.IsActive);
-        Assert.Null(teacherDto.StudentGradeId);
-        Assert.Null(teacherDto.GradeName);
+        Assert.Null(teacherDto.StudentSectionId);
+        Assert.Null(teacherDto.SectionName);
     }
 
     private sealed class FakeUserRepository : IUserRepository
@@ -702,38 +702,35 @@ public class AdminUserServiceTests
         }
     }
 
-    private sealed class FakeGradeRepository : IGradeRepository
+    private sealed class FakeSectionRepository : ISectionRepository
     {
-        public List<Grade> Grades { get; } = new();
+        public List<Section> Sections { get; } = new();
 
-        public Task<List<Grade>> GetAllAsync(CancellationToken ct = default)
-            => Task.FromResult(Grades.ToList());
+        public Task<List<Section>> GetAllAsync(CancellationToken ct = default)
+            => Task.FromResult(Sections.ToList());
 
-        public Task<Grade?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => Task.FromResult(Grades.FirstOrDefault(g => g.Id == id));
+        public Task<Section?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(Sections.FirstOrDefault(s => s.Id == id));
 
-        public Task<List<Grade>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
-            => Task.FromResult(Grades.Where(g => ids.Contains(g.Id)).ToList());
+        public Task<List<Section>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+            => Task.FromResult(Sections.Where(s => ids.Contains(s.Id)).ToList());
 
         public Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
-            => Task.FromResult(Grades.Any(g => g.Id == id));
+            => Task.FromResult(Sections.Any(s => s.Id == id));
 
-        public Task<bool> ExistsAsync(string name, string academicYear, CancellationToken ct = default)
-            => Task.FromResult(Grades.Any(g => g.Name == name && g.AcademicYear == academicYear));
-
-        public Task<bool> HasSubjectsAsync(Guid id, CancellationToken ct = default)
-            => Task.FromResult(false);
+        public Task<bool> ExistsByNameAsync(string name, Guid gradeId, CancellationToken ct = default)
+            => Task.FromResult(Sections.Any(s => s.Name == name && s.GradeId == gradeId));
 
         public Task<bool> HasStudentsAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(false);
 
-        public Task AddAsync(Grade grade, CancellationToken ct = default)
+        public Task AddAsync(Section section, CancellationToken ct = default)
         {
-            Grades.Add(grade);
+            Sections.Add(section);
             return Task.CompletedTask;
         }
 
-        public Task UpdateAsync(Grade grade, CancellationToken ct = default)
+        public Task UpdateAsync(Section section, CancellationToken ct = default)
             => Task.CompletedTask;
     }
 
