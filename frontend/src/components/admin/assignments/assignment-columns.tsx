@@ -6,6 +6,7 @@ import {
   AssignmentStatus,
   type AssignmentListItem,
 } from "@/lib/api/schemas/admin-assignments.schema";
+import { EMPTY_CELL } from "@/lib/messages";
 import { Badge } from "@/components/ui/badge";
 
 const statusVariant: Record<AssignmentListItem["status"], "default" | "secondary"> = {
@@ -22,17 +23,17 @@ export function buildAssignmentColumns(): ColumnDef<AssignmentListItem>[] {
     {
       accessorKey: "subjectName",
       header: "Subject",
-      cell: ({ row }) => row.original.subjectName ?? "—",
+      cell: ({ row }) => row.original.subjectName ?? EMPTY_CELL,
     },
     {
       accessorKey: "gradeName",
       header: "Grade",
-      cell: ({ row }) => row.original.gradeName ?? "—",
+      cell: ({ row }) => row.original.gradeName ?? EMPTY_CELL,
     },
     {
       accessorKey: "teacherName",
       header: "Teacher",
-      cell: ({ row }) => row.original.teacherName ?? "—",
+      cell: ({ row }) => row.original.teacherName ?? EMPTY_CELL,
     },
     {
       accessorKey: "deadline",

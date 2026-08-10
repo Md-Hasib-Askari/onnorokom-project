@@ -6,6 +6,9 @@ export const ERROR_MESSAGES = {
   sessionExpired: "Your session has expired. Please log in again.",
 } as const;
 
+/** Stands in for a table cell whose value is absent, so every table renders the gap alike. */
+export const EMPTY_CELL = "-";
+
 /** Form validation copy. Kept next to the error copy so wording stays consistent. */
 export const VALIDATION_MESSAGES = {
   fullNameRequired: "Full name is required.",
@@ -15,10 +18,13 @@ export const VALIDATION_MESSAGES = {
   confirmPasswordRequired: "Confirm your password.",
   passwordsDoNotMatch: "Passwords do not match.",
   gradeRequired: "Grade is required for students.",
+  sectionRequired: "Section is required for students.",
   subjectGradeRequired: "Grade is required.",
+  sectionGradeRequired: "Grade is required.",
   gradeNameRequired: "Grade name is required.",
   academicYearRequired: "Academic year is required.",
   subjectNameRequired: "Subject name is required.",
+  sectionNameRequired: "Section name is required.",
   passwordTooShort: (minLength: number) => `Must be at least ${minLength} characters.`,
   passwordNeedsUppercase: "Must contain an uppercase letter.",
   passwordNeedsLowercase: "Must contain a lowercase letter.",

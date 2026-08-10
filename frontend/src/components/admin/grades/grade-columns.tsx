@@ -4,6 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontalIcon } from "lucide-react";
 
 import type { GradeSummary } from "@/lib/api/schemas/grades.schema";
+import { EMPTY_CELL } from "@/lib/messages";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -28,7 +29,7 @@ export function buildGradeColumns(options: {
     {
       accessorKey: "description",
       header: "Description",
-      cell: ({ row }) => row.original.description ?? "—",
+      cell: ({ row }) => row.original.description ?? EMPTY_CELL,
     },
     {
       id: "actions",

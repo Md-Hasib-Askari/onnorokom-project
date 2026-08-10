@@ -6,6 +6,7 @@ import {
   SubmissionStatus,
   type SubmissionListItem,
 } from "@/lib/api/schemas/admin-assignments.schema";
+import { EMPTY_CELL } from "@/lib/messages";
 import { Badge } from "@/components/ui/badge";
 
 const statusVariant: Record<SubmissionListItem["status"], "default" | "secondary" | "destructive"> = {
@@ -20,12 +21,12 @@ export function buildSubmissionColumns(): ColumnDef<SubmissionListItem>[] {
     {
       accessorKey: "assignmentTitle",
       header: "Assignment",
-      cell: ({ row }) => row.original.assignmentTitle ?? "—",
+      cell: ({ row }) => row.original.assignmentTitle ?? EMPTY_CELL,
     },
     {
       accessorKey: "studentName",
       header: "Student",
-      cell: ({ row }) => row.original.studentName ?? "—",
+      cell: ({ row }) => row.original.studentName ?? EMPTY_CELL,
     },
     {
       accessorKey: "status",
@@ -37,7 +38,7 @@ export function buildSubmissionColumns(): ColumnDef<SubmissionListItem>[] {
     {
       accessorKey: "marks",
       header: "Marks",
-      cell: ({ row }) => row.original.marks ?? "—",
+      cell: ({ row }) => row.original.marks ?? EMPTY_CELL,
     },
     {
       accessorKey: "submittedAt",

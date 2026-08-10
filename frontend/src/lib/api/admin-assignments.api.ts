@@ -6,7 +6,7 @@ import {
   type SubmissionListItem,
 } from "./schemas/admin-assignments.schema";
 
-/** `/api/admin/assignments`, `/api/admin/submissions` — read-only, requires an Admin access token. */
+/** `/api/admin/assignments`, `/api/admin/submissions`, read-only, requires an Admin access token. */
 export class AdminAssignmentsApi {
   static async list(accessToken: string): Promise<AssignmentListItem[]> {
     const { data } = await apiClient.get("/api/admin/assignments", {
