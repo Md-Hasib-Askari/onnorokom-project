@@ -10,6 +10,10 @@ import {
   type LoginRequest,
   type RegisterRequest,
 } from "@/lib/api/schemas/auth.schema";
+import {
+  CLOSED_REGISTRATION_POLICY,
+  type RegistrationPolicy,
+} from "@/lib/api/schemas/settings.schema";
 import { ERROR_MESSAGES } from "@/lib/messages";
 import { ROUTES, sanitizeNextPath } from "@/lib/routes";
 import { roleHome } from "@/lib/auth/constants";
@@ -54,6 +58,19 @@ export async function registerAction(input: RegisterRequest): Promise<ActionResu
   }
 
   redirect(ROUTES.pendingApproval);
+}
+
+/**
+ * Reads the roles an admin has opened to public sign-up. Falls back to closed rather than
+ * surfacing an error: the form then offers nothing, which matches what the backend would accept
+ * if it is genuinely unreachable, and never invites a visitor into a role that may be shut.
+ */
+export async function getRegistrationPolicyAction(): Promise<RegistrationPolicy> {
+  try {
+    return await AuthApi.getRegistrationPolicy();
+  } catch {
+    return CLOSED_REGISTRATION_POLICY;
+  }
 }
 
 export async function logoutAction(): Promise<void> {

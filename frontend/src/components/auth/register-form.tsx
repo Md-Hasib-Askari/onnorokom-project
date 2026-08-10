@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CircleAlertIcon } from "lucide-react";
 
-import { passwordSchema } from "@/lib/api/schemas/auth.schema";
+import { passwordSchema, selfRegisterRoleSchema } from "@/lib/api/schemas/auth.schema";
+import type { SelfRegisterRole } from "@/lib/api/schemas/auth.schema";
 import { emailSchema, fullNameSchema, UserRole } from "@/lib/api/schemas/common.schema";
+import type { RegistrationPolicy } from "@/lib/api/schemas/settings.schema";
 import { VALIDATION_MESSAGES } from "@/lib/messages";
 import { AuthMutations } from "@/lib/mutations/auth.mutations";
 import { ROUTES } from "@/lib/routes";
@@ -37,7 +39,7 @@ const registerFormSchema = z
     email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string().min(1, VALIDATION_MESSAGES.confirmPasswordRequired),
-    role: z.literal(UserRole.Teacher),
+    role: selfRegisterRoleSchema,
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: VALIDATION_MESSAGES.passwordsDoNotMatch,
@@ -46,7 +48,32 @@ const registerFormSchema = z
 
 type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
-export function RegisterForm() {
+/** Label shown for each role a visitor may pick. */
+const ROLE_LABELS: Record<SelfRegisterRole, string> = {
+  [UserRole.Teacher]: "Teacher",
+  [UserRole.Student]: "Student",
+};
+
+/** Sentence fragment appended per role, so the description says what approval actually involves. */
+const ROLE_APPROVAL_NOTES: Record<SelfRegisterRole, string> = {
+  [UserRole.Teacher]: "Teacher accounts are approved by an administrator before you can sign in.",
+  [UserRole.Student]:
+    "Student accounts are approved by an administrator, who also assigns your section.",
+};
+
+export function RegisterForm({ policy }: { policy: RegistrationPolicy }) {
+  const openRoles = rolesOpenFor(policy);
+
+  if (openRoles.length === 0) {
+    return <RegistrationClosedCard />;
+  }
+
+  // The default role, and therefore the form's initial state, depends on what is open. Remounting
+  // on a change keeps the defaults honest without an effect that resyncs them.
+  return <OpenRegisterForm key={openRoles.join("-")} openRoles={openRoles} />;
+}
+
+function OpenRegisterForm({ openRoles }: { openRoles: SelfRegisterRole[] }) {
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
@@ -54,7 +81,7 @@ export function RegisterForm() {
       email: "",
       password: "",
       confirmPassword: "",
-      role: UserRole.Teacher,
+      role: openRoles[0],
     },
   });
 
@@ -76,12 +103,13 @@ export function RegisterForm() {
   }
 
   const topLevelError = mutation.data && !mutation.data.success ? mutation.data.error : undefined;
+  const selectedRole = useWatch({ control: form.control, name: "role" });
 
   return (
     <Card className="shadow-sm">
       <CardHeader className="gap-1.5">
         <CardTitle className="text-xl">Create an account</CardTitle>
-        <CardDescription>Teacher accounts are approved by an administrator before you can sign in.</CardDescription>
+        <CardDescription>{ROLE_APPROVAL_NOTES[selectedRole]}</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -119,20 +147,34 @@ export function RegisterForm() {
                 </FormItem>
               )}
             />
-            <FormItem>
-              <FormLabel>I am a</FormLabel>
-              <Select value={UserRole.Teacher} disabled>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={UserRole.Teacher}>Teacher</SelectItem>
-                  <SelectItem value={UserRole.Student} disabled>
-                    Student (ask an admin to create your account)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </FormItem>
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>I am a</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={openRoles.length === 1}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {openRoles.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {ROLE_LABELS[role]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="password"
@@ -164,13 +206,47 @@ export function RegisterForm() {
             </Button>
           </form>
         </Form>
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link href={ROUTES.login} className="underline underline-offset-4">
-            Sign in
-          </Link>
-        </p>
+        <SignInPrompt />
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * Shown when an admin has closed sign-up to both roles. There is no form to fall back to: the
+ * backend would refuse every role, so offering one would only produce a failed submit.
+ */
+function RegistrationClosedCard() {
+  return (
+    <Card className="shadow-sm">
+      <CardHeader className="gap-1.5">
+        <CardTitle className="text-xl">Sign-up is closed</CardTitle>
+        <CardDescription>
+          New accounts are not open to the public right now. Ask an administrator to create one for
+          you.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <SignInPrompt />
+      </CardContent>
+    </Card>
+  );
+}
+
+function SignInPrompt() {
+  return (
+    <p className="mt-4 text-center text-sm text-muted-foreground">
+      Already have an account?{" "}
+      <Link href={ROUTES.login} className="underline underline-offset-4">
+        Sign in
+      </Link>
+    </p>
+  );
+}
+
+function rolesOpenFor(policy: RegistrationPolicy): SelfRegisterRole[] {
+  const roles: SelfRegisterRole[] = [];
+  if (policy.teacherSelfRegistrationEnabled) roles.push(UserRole.Teacher);
+  if (policy.studentSelfRegistrationEnabled) roles.push(UserRole.Student);
+  return roles;
 }

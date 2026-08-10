@@ -52,18 +52,16 @@ export const passwordSchema = z
 export const selfRegisterRoleSchema = z.enum([UserRole.Teacher, UserRole.Student]);
 export type SelfRegisterRole = z.infer<typeof selfRegisterRoleSchema>;
 
-export const registerRequestSchema = z
-  .object({
-    fullName: fullNameSchema,
-    email: emailSchema,
-    password: passwordSchema,
-    role: selfRegisterRoleSchema,
-    studentGradeId: z.uuid().optional(),
-  })
-  .refine((data) => data.role !== UserRole.Student || !!data.studentGradeId, {
-    message: VALIDATION_MESSAGES.gradeRequired,
-    path: ["studentGradeId"],
-  });
+/**
+ * Sign-up carries no section: a student picks none, and the approving admin assigns one. Keeping
+ * the roster out of the public form means nothing about it leaks to anonymous visitors.
+ */
+export const registerRequestSchema = z.object({
+  fullName: fullNameSchema,
+  email: emailSchema,
+  password: passwordSchema,
+  role: selfRegisterRoleSchema,
+});
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
 
 export const registerResponseSchema = z.object({
