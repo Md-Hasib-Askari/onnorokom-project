@@ -13,8 +13,10 @@ export const ROUTES = {
   admin: "/admin",
   adminUsers: "/admin/users",
   adminGrades: "/admin/grades",
+  adminSections: "/admin/sections",
   adminSubjects: "/admin/subjects",
   adminAssignments: "/admin/assignments",
+  adminSettings: "/admin/settings",
 } as const;
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];
