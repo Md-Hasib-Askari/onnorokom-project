@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import { AccountStatus, UserRole } from "@/lib/api/schemas/common.schema";
 import { ERROR_MESSAGES } from "@/lib/messages";
 import { AdminUserMutations } from "@/lib/mutations/admin-users.mutations";
 import { AdminGradeQueries } from "@/lib/queries/admin-grades.queries";
+import { AdminSectionQueries } from "@/lib/queries/admin-sections.queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,7 +51,21 @@ interface EditUserDialogProps {
 
 export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
   const grades = AdminGradeQueries.useCurrentYearList();
+  const allSections = AdminSectionQueries.useList();
   const mutation = AdminUserMutations.useUpdate();
+
+  // Adjusts state when the `user` prop changes, per React's guidance on resetting
+  // state on prop change (done during render, not in an effect, to avoid cascading renders).
+  const [prevUserId, setPrevUserId] = useState(user?.id);
+  const [gradeOverride, setGradeOverride] = useState<string | undefined>(undefined);
+  if (user?.id !== prevUserId) {
+    setPrevUserId(user?.id);
+    setGradeOverride(undefined);
+  }
+
+  const derivedGradeId = allSections.data?.find((section) => section.id === user?.studentSectionId)?.gradeId;
+  const studentGradeId = gradeOverride ?? derivedGradeId;
+  const sections = AdminSectionQueries.useByGrade(studentGradeId);
 
   const form = useForm<AdminUpdateUserRequest>({
     resolver: user ? zodResolver(adminUpdateUserSchemaFor(user.role)) : undefined,
@@ -59,7 +74,7 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
       email: "",
       status: AccountStatus.Approved,
       isActive: true,
-      studentGradeId: undefined,
+      studentSectionId: undefined,
     },
   });
 
@@ -70,7 +85,7 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
       email: user.email,
       status: user.status === AccountStatus.Rejected ? AccountStatus.Rejected : AccountStatus.Approved,
       isActive: user.isActive,
-      studentGradeId: user.studentGradeId ?? undefined,
+      studentSectionId: user.studentSectionId ?? undefined,
     });
   }, [user, form]);
 
@@ -165,30 +180,67 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
               )}
             />
             {user.role === UserRole.Student && (
-              <FormField
-                control={form.control}
-                name="studentGradeId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Grade</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder={grades.isLoading ? "Loading..." : "Select a grade"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {grades.data?.map((grade) => (
-                          <SelectItem key={grade.id} value={grade.id}>
-                            {grade.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <>
+                <FormItem>
+                  <FormLabel>Grade</FormLabel>
+                  <Select
+                    value={studentGradeId ?? ""}
+                    onValueChange={(value) => {
+                      setGradeOverride(value);
+                      form.setValue("studentSectionId", undefined);
+                    }}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={grades.isLoading ? "Loading..." : "Select a grade"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {grades.data?.map((grade) => (
+                        <SelectItem key={grade.id} value={grade.id}>
+                          {grade.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+                <FormField
+                  control={form.control}
+                  name="studentSectionId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Section</FormLabel>
+                      <Select
+                        value={field.value ?? ""}
+                        onValueChange={field.onChange}
+                        disabled={!studentGradeId}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue
+                              placeholder={
+                                !studentGradeId
+                                  ? "Select a grade first"
+                                  : sections.isLoading
+                                    ? "Loading..."
+                                    : "Select a section"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {sections.data?.map((section) => (
+                            <SelectItem key={section.id} value={section.id}>
+                              {section.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
             )}
             <FormField
               control={form.control}

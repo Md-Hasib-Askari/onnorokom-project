@@ -4,6 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { AdminUserSummary } from "@/lib/api/schemas/admin-users.schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { enrollmentColumns } from "./enrollment-columns";
 
 export function buildPendingColumns(options: {
   onApprove: (user: AdminUserSummary, approve: boolean) => void;
@@ -17,6 +18,7 @@ export function buildPendingColumns(options: {
       header: "Role",
       cell: ({ row }) => <Badge variant="outline">{row.original.role}</Badge>,
     },
+    ...enrollmentColumns,
     {
       accessorKey: "createdAt",
       header: "Requested",

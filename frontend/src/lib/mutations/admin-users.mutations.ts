@@ -10,6 +10,7 @@ import {
 import type {
   AdminCreateUserRequest,
   AdminUpdateUserRequest,
+  ApproveUserRequest,
 } from "@/lib/api/schemas/admin-users.schema";
 import type { UserRole } from "@/lib/api/schemas/common.schema";
 import { adminUsersKeys } from "@/lib/queries/admin-users.queries";
@@ -19,8 +20,7 @@ export const AdminUserMutations = {
   useApprove() {
     const queryClient = useQueryClient();
     return useMutation({
-      mutationFn: ({ userId, approve }: { userId: string; approve: boolean }) =>
-        approveUserAction(userId, approve),
+      mutationFn: (values: ApproveUserRequest) => approveUserAction(values),
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: adminUsersKeys.all });

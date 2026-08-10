@@ -14,6 +14,7 @@ import { USER_ROLES, UserRole } from "@/lib/api/schemas/common.schema";
 import { ERROR_MESSAGES } from "@/lib/messages";
 import { AdminUserMutations } from "@/lib/mutations/admin-users.mutations";
 import { AdminGradeQueries } from "@/lib/queries/admin-grades.queries";
+import { AdminSectionQueries } from "@/lib/queries/admin-sections.queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,7 +44,9 @@ import {
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false);
+  const [studentGradeId, setStudentGradeId] = useState<string | undefined>(undefined);
   const grades = AdminGradeQueries.useCurrentYearList();
+  const sections = AdminSectionQueries.useByGrade(studentGradeId);
   const mutation = AdminUserMutations.useCreate();
 
   const form = useForm<AdminCreateUserRequest>({
@@ -53,11 +56,16 @@ export function CreateUserDialog() {
       email: "",
       password: "",
       role: UserRole.Teacher,
-      studentGradeId: undefined,
+      studentSectionId: undefined,
     },
   });
 
   const role = form.watch("role");
+
+  function resetStudentFields() {
+    setStudentGradeId(undefined);
+    form.setValue("studentSectionId", undefined);
+  }
 
   function onSubmit(values: AdminCreateUserRequest) {
     mutation.mutate(values, {
@@ -66,6 +74,7 @@ export function CreateUserDialog() {
           toast.success("User created.");
           setOpen(false);
           form.reset();
+          resetStudentFields();
           return;
         }
         if (result.fieldErrors) {
@@ -87,7 +96,10 @@ export function CreateUserDialog() {
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) form.reset();
+        if (!next) {
+          form.reset();
+          resetStudentFields();
+        }
       }}
     >
       <DialogTrigger asChild>
@@ -154,7 +166,7 @@ export function CreateUserDialog() {
                     value={field.value}
                     onValueChange={(value) => {
                       field.onChange(value);
-                      if (value !== UserRole.Student) form.setValue("studentGradeId", undefined);
+                      if (value !== UserRole.Student) resetStudentFields();
                     }}
                   >
                     <FormControl>
@@ -175,30 +187,67 @@ export function CreateUserDialog() {
               )}
             />
             {role === UserRole.Student && (
-              <FormField
-                control={form.control}
-                name="studentGradeId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Grade</FormLabel>
-                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder={grades.isLoading ? "Loading..." : "Select a grade"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {grades.data?.map((grade) => (
-                          <SelectItem key={grade.id} value={grade.id}>
-                            {grade.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <>
+                <FormItem>
+                  <FormLabel>Grade</FormLabel>
+                  <Select
+                    value={studentGradeId ?? ""}
+                    onValueChange={(value) => {
+                      setStudentGradeId(value);
+                      form.setValue("studentSectionId", undefined);
+                    }}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={grades.isLoading ? "Loading..." : "Select a grade"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {grades.data?.map((grade) => (
+                        <SelectItem key={grade.id} value={grade.id}>
+                          {grade.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+                <FormField
+                  control={form.control}
+                  name="studentSectionId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Section</FormLabel>
+                      <Select
+                        value={field.value ?? ""}
+                        onValueChange={field.onChange}
+                        disabled={!studentGradeId}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue
+                              placeholder={
+                                !studentGradeId
+                                  ? "Select a grade first"
+                                  : sections.isLoading
+                                    ? "Loading..."
+                                    : "Select a section"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {sections.data?.map((section) => (
+                            <SelectItem key={section.id} value={section.id}>
+                              {section.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
             )}
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>

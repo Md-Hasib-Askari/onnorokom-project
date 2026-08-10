@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { enrollmentColumns } from "./enrollment-columns";
 
 const statusVariant: Record<AdminUserSummary["status"], "default" | "secondary" | "destructive"> = {
   [AccountStatus.Approved]: "default",
@@ -50,6 +51,7 @@ export function buildUserColumns(options: {
       header: "Role",
       cell: ({ row }) => <Badge variant="outline">{row.original.role}</Badge>,
     },
+    ...enrollmentColumns,
     {
       accessorKey: "status",
       header: "Status",

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import type { AdminUserSummary } from "@/lib/api/schemas/admin-users.schema";
-import { AccountStatus } from "@/lib/api/schemas/common.schema";
+import { AccountStatus, UserRole } from "@/lib/api/schemas/common.schema";
 import { ERROR_MESSAGES } from "@/lib/messages";
 import { AdminUserQueries } from "@/lib/queries/admin-users.queries";
 import { AdminUserMutations } from "@/lib/mutations/admin-users.mutations";
@@ -15,6 +15,7 @@ import { DataTable } from "@/components/admin/data-table";
 import { buildUserColumns } from "./user-columns";
 import { buildPendingColumns } from "./pending-columns";
 import { buildRejectedColumns } from "./rejected-columns";
+import { ApproveStudentDialog } from "./approve-student-dialog";
 import { CreateUserDialog } from "./create-user-dialog";
 import { EditUserDialog } from "./edit-user-dialog";
 import { DeleteUserDialog } from "./delete-user-dialog";
@@ -41,8 +42,16 @@ export function UsersView({ currentUserId }: UsersViewProps) {
 
   const [editingUser, setEditingUser] = useState<AdminUserSummary | null>(null);
   const [deletingUser, setDeletingUser] = useState<AdminUserSummary | null>(null);
+  const [approvingStudent, setApprovingStudent] = useState<AdminUserSummary | null>(null);
 
   function handleApprove(user: AdminUserSummary, approve: boolean) {
+    // A self-registered student has no section yet, so approving one is also an enrolment decision.
+    // Rejecting never is, and a student an admin created already has a section to keep.
+    if (approve && user.role === UserRole.Student && !user.studentSectionId) {
+      setApprovingStudent(user);
+      return;
+    }
+
     approveMutation.mutate(
       { userId: user.id, approve },
       {
@@ -141,6 +150,11 @@ export function UsersView({ currentUserId }: UsersViewProps) {
         </TabsContent>
       </Tabs>
 
+      <ApproveStudentDialog
+        user={approvingStudent}
+        onOpenChange={(open) => !open && setApprovingStudent(null)}
+        mutation={approveMutation}
+      />
       <EditUserDialog user={editingUser} onOpenChange={(open) => !open && setEditingUser(null)} />
       <DeleteUserDialog
         user={deletingUser}

@@ -10,8 +10,10 @@ import { fieldErrorsFrom } from "@/lib/api/zod-error";
 import {
   adminCreateUserRequestSchema,
   adminUpdateUserSchemaFor,
+  approveUserRequestSchema,
   type AdminCreateUserRequest,
   type AdminUpdateUserRequest,
+  type ApproveUserRequest,
 } from "@/lib/api/schemas/admin-users.schema";
 import { UserRole } from "@/lib/api/schemas/common.schema";
 import { ERROR_MESSAGES } from "@/lib/messages";
@@ -63,11 +65,15 @@ export async function listGradesAction() {
   }
 }
 
-export async function approveUserAction(userId: string, approve: boolean): Promise<ActionResult> {
+export async function approveUserAction(input: ApproveUserRequest): Promise<ActionResult> {
   await requireRole(UserRole.Admin);
+  const parsed = approveUserRequestSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: ERROR_MESSAGES.validation, fieldErrors: fieldErrorsFrom(parsed.error) };
+  }
   try {
     const token = await accessTokenOrThrow();
-    await AdminUsersApi.approve(token, userId, approve);
+    await AdminUsersApi.approve(token, parsed.data);
   } catch (error) {
     if (error instanceof ApiError) return { success: false, error: error.message };
     return { success: false, error: ERROR_MESSAGES.genericRetry };

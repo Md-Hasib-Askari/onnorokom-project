@@ -6,6 +6,7 @@ import {
   type AdminCreateUserRequest,
   type AdminUpdateUserRequest,
   type AdminUserSummary,
+  type ApproveUserRequest,
   type ApproveUserResponse,
 } from "./schemas/admin-users.schema";
 
@@ -27,14 +28,11 @@ export class AdminUsersApi {
 
   static async approve(
     accessToken: string,
-    userId: string,
-    approve: boolean
+    payload: ApproveUserRequest
   ): Promise<ApproveUserResponse> {
-    const { data } = await apiClient.post(
-      "/api/admin/users/approve",
-      { userId, approve },
-      { headers: authHeaders(accessToken) }
-    );
+    const { data } = await apiClient.post("/api/admin/users/approve", payload, {
+      headers: authHeaders(accessToken),
+    });
     return approveUserResponseSchema.parse(data);
   }
 

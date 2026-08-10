@@ -20,7 +20,8 @@ export const adminUserSummarySchema = z.object({
   status: accountStatusSchema,
   createdAt: z.string(),
   isActive: z.boolean(),
-  studentGradeId: z.string().nullable(),
+  studentSectionId: z.string().nullable(),
+  sectionName: z.string().nullable(),
   gradeName: z.string().nullable(),
 });
 export type AdminUserSummary = z.infer<typeof adminUserSummarySchema>;
@@ -29,9 +30,14 @@ export const adminUserListResponseSchema = z.array(adminUserSummarySchema);
 
 // ---- POST /api/admin/users/approve ----
 
+/**
+ * `studentSectionId` is required only when approving a self-registered student, who has no section
+ * yet. Ignored for every other role and for students an admin created with a section already.
+ */
 export const approveUserRequestSchema = z.object({
   userId: z.uuid(),
   approve: z.boolean(),
+  studentSectionId: z.uuid().optional(),
 });
 export type ApproveUserRequest = z.infer<typeof approveUserRequestSchema>;
 
@@ -52,11 +58,11 @@ export const adminCreateUserRequestSchema = z
     email: emailSchema,
     password: passwordSchema,
     role: userRoleSchema,
-    studentGradeId: z.uuid().optional(),
+    studentSectionId: z.uuid().optional(),
   })
-  .refine((data) => data.role !== UserRole.Student || !!data.studentGradeId, {
-    message: VALIDATION_MESSAGES.gradeRequired,
-    path: ["studentGradeId"],
+  .refine((data) => data.role !== UserRole.Student || !!data.studentSectionId, {
+    message: VALIDATION_MESSAGES.sectionRequired,
+    path: ["studentSectionId"],
   });
 export type AdminCreateUserRequest = z.infer<typeof adminCreateUserRequestSchema>;
 
@@ -94,18 +100,18 @@ export const adminUpdateUserRequestSchema = z.object({
   email: emailSchema,
   status: editableAccountStatusSchema,
   isActive: z.boolean(),
-  studentGradeId: z.uuid().optional(),
+  studentSectionId: z.uuid().optional(),
   teacherProfile: teacherProfileInputSchema.optional(),
   adminProfile: adminProfileInputSchema.optional(),
 });
 export type AdminUpdateUserRequest = z.infer<typeof adminUpdateUserRequestSchema>;
 
-/** studentGradeId is only required when editing a user whose role is Student. */
+/** studentSectionId is only required when editing a user whose role is Student. */
 export function adminUpdateUserSchemaFor(role: UserRole) {
   if (role !== UserRole.Student) return adminUpdateUserRequestSchema;
-  return adminUpdateUserRequestSchema.refine((data) => !!data.studentGradeId, {
-    message: VALIDATION_MESSAGES.gradeRequired,
-    path: ["studentGradeId"],
+  return adminUpdateUserRequestSchema.refine((data) => !!data.studentSectionId, {
+    message: VALIDATION_MESSAGES.sectionRequired,
+    path: ["studentSectionId"],
   });
 }
 
