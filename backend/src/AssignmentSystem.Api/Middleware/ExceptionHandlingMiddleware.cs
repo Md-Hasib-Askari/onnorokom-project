@@ -25,6 +25,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             DuplicateEntityException de => (StatusCodes.Status409Conflict, Error(de)),
             EntityInUseException iu => (StatusCodes.Status409Conflict, Error(iu)),
             EntityNotFoundException nf => (StatusCodes.Status404NotFound, Error(nf)),
+            RegistrationDisabledException rd => (StatusCodes.Status403Forbidden, Error(rd)),
             DomainException d => (StatusCodes.Status400BadRequest, Error(d)),
             ValidationException ve => (StatusCodes.Status400BadRequest, ValidationError(ve)),
             _ => (StatusCodes.Status500InternalServerError, Error("An unexpected error occurred."))

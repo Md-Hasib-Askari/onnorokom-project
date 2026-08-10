@@ -17,8 +17,11 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddScoped<IGradeService, GradeService>();
+        services.AddScoped<ISectionService, SectionService>();
         services.AddScoped<ISubjectService, SubjectService>();
+        services.AddScoped<ISectionSubjectService, SectionSubjectService>();
         services.AddScoped<IAdminQueryService, AdminQueryService>();
+        services.AddScoped<ISystemSettingService, SystemSettingService>();
         return services;
     }
 }

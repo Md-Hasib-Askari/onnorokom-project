@@ -1,3 +1,5 @@
+using AssignmentSystem.Domain.Enums;
+
 namespace AssignmentSystem.Application.Common.Exceptions;
 
 public class DomainException(string message) : Exception(message);
@@ -34,6 +36,13 @@ public class InvalidRefreshTokenException : DomainException
     public InvalidRefreshTokenException()
         : base("Refresh token is invalid or has expired.") { }
 }
+
+/// <summary>
+/// Raised when an admin has switched off self-registration for the requested role. Distinct from a
+/// validation failure: the payload is well formed, the system is simply closed to it right now.
+/// </summary>
+public class RegistrationDisabledException(UserRole role)
+    : DomainException($"Self-registration is currently closed for the {role} role. Contact an administrator.");
 
 public class EntityNotFoundException(string message) : DomainException(message);
 

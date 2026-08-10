@@ -10,10 +10,23 @@ namespace AssignmentSystem.Api.Controllers;
 [Route("api/auth")]
 public class AuthController(
     IAuthService authService,
+    ISystemSettingService systemSettingService,
     IValidator<RegisterRequest> registerValidator,
     IValidator<LoginRequest> loginValidator,
     IValidator<RefreshTokenRequest> refreshTokenValidator) : ControllerBase
 {
+    /// <summary>
+    /// Lets the sign-up page show only the roles an admin has opened. Anonymous by necessity, and
+    /// safe because it returns two policy booleans rather than the settings store.
+    /// </summary>
+    [HttpGet("registration-policy")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetRegistrationPolicy(CancellationToken ct)
+    {
+        var policy = await systemSettingService.GetRegistrationPolicyAsync(ct);
+        return Ok(policy);
+    }
+
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken ct)
