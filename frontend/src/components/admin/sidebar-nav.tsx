@@ -5,8 +5,10 @@ import { usePathname } from "next/navigation";
 import {
   UsersIcon,
   GraduationCapIcon,
+  LayersIcon,
   BookOpenIcon,
   ClipboardListIcon,
+  SettingsIcon,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +25,10 @@ type SidebarNavItem = {
 const navItems: SidebarNavItem[] = [
   { href: ROUTES.adminUsers, label: "Users", icon: UsersIcon, enabled: true },
   { href: ROUTES.adminGrades, label: "Grades", icon: GraduationCapIcon, enabled: true },
+  { href: ROUTES.adminSections, label: "Sections", icon: LayersIcon, enabled: true },
   { href: ROUTES.adminSubjects, label: "Subjects", icon: BookOpenIcon, enabled: true },
   { href: ROUTES.adminAssignments, label: "Assignments", icon: ClipboardListIcon, enabled: true },
+  { href: ROUTES.adminSettings, label: "Settings", icon: SettingsIcon, enabled: true },
 ];
 
 export function SidebarNav() {
