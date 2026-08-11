@@ -233,6 +233,12 @@ public class SubjectServiceTests
         public Task<SectionSubject?> GetBySectionAndSubjectAsync(Guid sectionId, Guid subjectId, CancellationToken ct = default)
             => Task.FromResult(Rows.FirstOrDefault(r => r.SectionId == sectionId && r.SubjectId == subjectId));
 
+        public Task<List<SectionSubject>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default)
+            => Task.FromResult(Rows.Where(r => r.TeacherId == teacherId).ToList());
+
+        public Task<bool> ExistsForTeacherAsync(Guid sectionId, Guid subjectId, Guid teacherId, CancellationToken ct = default)
+            => Task.FromResult(Rows.Any(r => r.SectionId == sectionId && r.SubjectId == subjectId && r.TeacherId == teacherId));
+
         public Task AddAsync(SectionSubject sectionSubject, CancellationToken ct = default)
         {
             Rows.Add(sectionSubject);

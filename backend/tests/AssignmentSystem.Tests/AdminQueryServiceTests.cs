@@ -1,4 +1,5 @@
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.DTOs.Assignments;
 using AssignmentSystem.Application.Services;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
@@ -51,6 +52,12 @@ public class AdminQueryServiceTests
         public Task<Assignment?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(assignments.FirstOrDefault(a => a.Id == id));
 
+        public Task<List<Assignment>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default)
+            => Task.FromResult(assignments.Where(a => a.TeacherId == teacherId).ToList());
+
+        public Task<bool> HasSubmissionsAsync(Guid assignmentId, CancellationToken ct = default)
+            => Task.FromResult(false);
+
         public Task AddAsync(Assignment assignment, CancellationToken ct = default)
         {
             assignments.Add(assignment);
@@ -59,11 +66,53 @@ public class AdminQueryServiceTests
 
         public Task UpdateAsync(Assignment assignment, CancellationToken ct = default)
             => Task.CompletedTask;
+
+        public Task DeleteAsync(Assignment assignment, CancellationToken ct = default)
+        {
+            assignments.Remove(assignment);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeSubmissionRepository(List<Submission> submissions) : ISubmissionRepository
     {
         public Task<List<Submission>> GetAllAsync(CancellationToken ct = default)
             => Task.FromResult(submissions);
+
+        public Task<Submission?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(submissions.FirstOrDefault(s => s.Id == id));
+
+        public Task<List<Submission>> GetByAssignmentAsync(Guid assignmentId, CancellationToken ct = default)
+            => Task.FromResult(submissions.Where(s => s.AssignmentId == assignmentId).ToList());
+
+        public Task<Submission?> GetByAssignmentAndStudentAsync(Guid assignmentId, Guid studentId, CancellationToken ct = default)
+            => Task.FromResult(submissions.FirstOrDefault(s => s.AssignmentId == assignmentId && s.StudentId == studentId));
+
+        public Task<Dictionary<Guid, SubmissionCounts>> GetCountsByAssignmentIdsAsync(
+            IEnumerable<Guid> assignmentIds,
+            CancellationToken ct = default)
+        {
+            var ids = assignmentIds.ToHashSet();
+            return Task.FromResult(submissions
+                .Where(s => ids.Contains(s.AssignmentId))
+                .GroupBy(s => s.AssignmentId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => new SubmissionCounts(g.Count(), g.Count(s => s.Status == SubmissionStatus.Graded))));
+        }
+
+        public Task<decimal?> GetMaxAwardedMarksAsync(Guid assignmentId, CancellationToken ct = default)
+            => Task.FromResult(submissions
+                .Where(s => s.AssignmentId == assignmentId && s.Marks != null)
+                .Max(s => s.Marks));
+
+        public Task AddAsync(Submission submission, CancellationToken ct = default)
+        {
+            submissions.Add(submission);
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(Submission submission, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 }

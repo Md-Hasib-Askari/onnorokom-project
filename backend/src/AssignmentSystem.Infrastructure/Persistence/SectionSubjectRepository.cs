@@ -24,6 +24,26 @@ public class SectionSubjectRepository(AppDbContext dbContext) : ISectionSubjectR
             .FirstOrDefaultAsync(ss => ss.SectionId == sectionId && ss.SubjectId == subjectId, ct);
     }
 
+    public async Task<List<SectionSubject>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default)
+    {
+        return await dbContext.SectionSubjects
+            .Include(ss => ss.Section)
+            .ThenInclude(s => s!.Grade)
+            .Include(ss => ss.Subject)
+            .Where(ss => ss.TeacherId == teacherId)
+            .OrderBy(ss => ss.Section!.Grade!.Name)
+            .ThenBy(ss => ss.Section!.Name)
+            .ThenBy(ss => ss.Subject!.Name)
+            .ToListAsync(ct);
+    }
+
+    public async Task<bool> ExistsForTeacherAsync(Guid sectionId, Guid subjectId, Guid teacherId, CancellationToken ct = default)
+    {
+        return await dbContext.SectionSubjects.AnyAsync(
+            ss => ss.SectionId == sectionId && ss.SubjectId == subjectId && ss.TeacherId == teacherId,
+            ct);
+    }
+
     public async Task AddAsync(SectionSubject sectionSubject, CancellationToken ct = default)
     {
         dbContext.SectionSubjects.Add(sectionSubject);
