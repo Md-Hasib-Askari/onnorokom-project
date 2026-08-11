@@ -31,6 +31,11 @@ export function buildAssignmentColumns(): ColumnDef<AssignmentListItem>[] {
       cell: ({ row }) => row.original.gradeName ?? EMPTY_CELL,
     },
     {
+      accessorKey: "sectionName",
+      header: "Section",
+      cell: ({ row }) => row.original.sectionName ?? EMPTY_CELL,
+    },
+    {
       accessorKey: "teacherName",
       header: "Teacher",
       cell: ({ row }) => row.original.teacherName ?? EMPTY_CELL,
@@ -43,6 +48,11 @@ export function buildAssignmentColumns(): ColumnDef<AssignmentListItem>[] {
     {
       accessorKey: "maxMarks",
       header: "Max marks",
+    },
+    {
+      accessorKey: "submissionCount",
+      header: "Submissions",
+      cell: ({ row }) => <span className="tabular-nums">{row.original.submissionCount}</span>,
     },
     {
       accessorKey: "status",

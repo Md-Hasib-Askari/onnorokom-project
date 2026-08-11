@@ -6,7 +6,7 @@ import type { SubjectSummary } from "@/lib/api/schemas/admin-subjects.schema";
 import { AdminSubjectQueries } from "@/lib/queries/admin-subjects.queries";
 import { AdminSubjectMutations } from "@/lib/mutations/admin-subjects.mutations";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DataTable } from "@/components/admin/data-table";
+import { DataTable } from "@/components/workspace/data-table";
 import { buildSubjectColumns } from "./subject-columns";
 import { CreateSubjectDialog } from "./create-subject-dialog";
 import { EditSubjectDialog } from "./edit-subject-dialog";

@@ -6,7 +6,7 @@ import type { GradeSummary } from "@/lib/api/schemas/grades.schema";
 import { AdminGradeQueries } from "@/lib/queries/admin-grades.queries";
 import { AdminGradeMutations } from "@/lib/mutations/admin-grades.mutations";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DataTable } from "@/components/admin/data-table";
+import { DataTable } from "@/components/workspace/data-table";
 import { buildGradeColumns } from "./grade-columns";
 import { CreateGradeDialog } from "./create-grade-dialog";
 import { EditGradeDialog } from "./edit-grade-dialog";

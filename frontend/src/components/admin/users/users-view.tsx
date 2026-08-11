@@ -11,7 +11,7 @@ import { AdminUserMutations } from "@/lib/mutations/admin-users.mutations";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DataTable } from "@/components/admin/data-table";
+import { DataTable } from "@/components/workspace/data-table";
 import { buildUserColumns } from "./user-columns";
 import { buildPendingColumns } from "./pending-columns";
 import { buildRejectedColumns } from "./rejected-columns";

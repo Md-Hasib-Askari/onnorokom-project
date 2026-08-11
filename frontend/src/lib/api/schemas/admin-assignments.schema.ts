@@ -10,6 +10,8 @@ export const assignmentListItemSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string().nullable(),
+  sectionId: z.string(),
+  sectionName: z.string().nullable(),
   subjectId: z.string(),
   subjectName: z.string().nullable(),
   gradeName: z.string().nullable(),
@@ -19,6 +21,7 @@ export const assignmentListItemSchema = z.object({
   maxMarks: z.number(),
   status: assignmentStatusSchema,
   allowLateSubmission: z.boolean(),
+  submissionCount: z.number(),
 });
 export type AssignmentListItem = z.infer<typeof assignmentListItemSchema>;
 

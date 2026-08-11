@@ -6,7 +6,7 @@ import type { SectionSummary } from "@/lib/api/schemas/sections.schema";
 import { AdminSectionQueries } from "@/lib/queries/admin-sections.queries";
 import { AdminSectionMutations } from "@/lib/mutations/admin-sections.mutations";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DataTable } from "@/components/admin/data-table";
+import { DataTable } from "@/components/workspace/data-table";
 import { buildSectionColumns } from "./section-columns";
 import { CreateSectionDialog } from "./create-section-dialog";
 import { EditSectionDialog } from "./edit-section-dialog";

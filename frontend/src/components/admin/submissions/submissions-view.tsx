@@ -3,34 +3,34 @@
 import { AdminAssignmentQueries } from "@/lib/queries/admin-assignments.queries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/workspace/data-table";
-import { buildAssignmentColumns } from "./assignment-columns";
+import { buildSubmissionColumns } from "./submission-columns";
 
 /** Placeholder rows shown while the table loads. */
 const SKELETON_ROW_COUNT = 5;
 
-export function AssignmentsView() {
-  const query = AdminAssignmentQueries.useList();
-  const columns = buildAssignmentColumns();
+export function SubmissionsView() {
+  const query = AdminAssignmentQueries.useSubmissions();
+  const columns = buildSubmissionColumns();
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Assignments</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Submissions</h1>
         <p className="text-sm text-muted-foreground">
-          Read-only view of every assignment across the system, with how many students have
-          answered each one.
+          Read-only view of every submission across the system. Grading stays with the teacher who
+          set the assignment.
         </p>
       </div>
 
       {query.isLoading ? (
         <TableSkeleton />
       ) : query.isError ? (
-        <p className="text-sm text-destructive">Failed to load assignments.</p>
+        <p className="text-sm text-destructive">Failed to load submissions.</p>
       ) : (
         <DataTable
           columns={columns}
           data={query.data ?? []}
-          emptyMessage="No assignments yet."
+          emptyMessage="No submissions yet."
         />
       )}
     </div>

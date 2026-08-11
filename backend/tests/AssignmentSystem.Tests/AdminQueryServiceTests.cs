@@ -24,7 +24,34 @@ public class AdminQueryServiceTests
         Assert.Equal(assignment.TeacherId, dto.TeacherId);
         Assert.Equal(assignment.Deadline, dto.Deadline);
         Assert.Equal(assignment.MaxMarks, dto.MaxMarks);
+        Assert.Equal(assignment.SectionId, dto.SectionId);
         Assert.Equal(assignment.Status, dto.Status);
+        Assert.Equal(0, dto.SubmissionCount);
+    }
+
+    [Fact]
+    public async Task GetAllAssignments_CountsSubmissionsPerAssignment()
+    {
+        var counted = Assignment.Create("Counted", Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            DateTimeOffset.UtcNow.AddDays(7), 100);
+        var untouched = Assignment.Create("Untouched", Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            DateTimeOffset.UtcNow.AddDays(7), 100);
+
+        var submissions = new List<Submission>
+        {
+            Submission.Create(counted.Id, Guid.NewGuid(), content: "First"),
+            Submission.Create(counted.Id, Guid.NewGuid(), content: "Second")
+        };
+
+        var sut = new AdminQueryService(
+            new FakeAssignmentRepository([counted, untouched]),
+            new FakeSubmissionRepository(submissions),
+            TestMappers.CreateMapper());
+
+        var dtos = await sut.GetAllAssignmentsAsync();
+
+        Assert.Equal(2, dtos.Single(d => d.Id == counted.Id).SubmissionCount);
+        Assert.Equal(0, dtos.Single(d => d.Id == untouched.Id).SubmissionCount);
     }
 
     [Fact]
@@ -54,6 +81,11 @@ public class AdminQueryServiceTests
 
         public Task<List<Assignment>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default)
             => Task.FromResult(assignments.Where(a => a.TeacherId == teacherId).ToList());
+
+        public Task<List<Assignment>> GetPublishedForSectionAsync(Guid sectionId, CancellationToken ct = default)
+            => Task.FromResult(assignments
+                .Where(a => a.SectionId == sectionId && a.Status == AssignmentStatus.Published)
+                .ToList());
 
         public Task<bool> HasSubmissionsAsync(Guid assignmentId, CancellationToken ct = default)
             => Task.FromResult(false);
@@ -87,6 +119,17 @@ public class AdminQueryServiceTests
 
         public Task<Submission?> GetByAssignmentAndStudentAsync(Guid assignmentId, Guid studentId, CancellationToken ct = default)
             => Task.FromResult(submissions.FirstOrDefault(s => s.AssignmentId == assignmentId && s.StudentId == studentId));
+
+        public Task<List<Submission>> GetByStudentAndAssignmentIdsAsync(
+            Guid studentId,
+            IEnumerable<Guid> assignmentIds,
+            CancellationToken ct = default)
+        {
+            var ids = assignmentIds.ToHashSet();
+            return Task.FromResult(submissions
+                .Where(s => s.StudentId == studentId && ids.Contains(s.AssignmentId))
+                .ToList());
+        }
 
         public Task<Dictionary<Guid, SubmissionCounts>> GetCountsByAssignmentIdsAsync(
             IEnumerable<Guid> assignmentIds,
