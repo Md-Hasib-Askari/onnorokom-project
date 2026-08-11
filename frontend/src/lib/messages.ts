@@ -16,6 +16,10 @@ export const SELECT_PLACEHOLDERS = {
   section: "Select a section",
   sectionNeedsGrade: "Select a grade first",
   sectionNone: "This grade has no sections yet",
+  sectionUnassigned: "No sections assigned to you yet",
+  subject: "Select a subject",
+  subjectNeedsSection: "Select a section first",
+  subjectNone: "This section has no subjects yet",
 } as const;
 
 /** Form validation copy. Kept next to the error copy so wording stays consistent. */
@@ -34,6 +38,16 @@ export const VALIDATION_MESSAGES = {
   academicYearRequired: "Academic year is required.",
   subjectNameRequired: "Subject name is required.",
   sectionNameRequired: "Section name is required.",
+  subjectRequired: "Subject is required.",
+  assignmentTitleRequired: "Assignment title is required.",
+  deadlineRequired: "Deadline is required.",
+  deadlineInvalid: "Enter a valid date and time.",
+  deadlineMustBeFuture: "Deadline must be in the future.",
+  maxMarksPositive: "Maximum marks must be greater than zero.",
+  marksNotNegative: "Marks cannot be negative.",
+  marksAboveMax: (maxMarks: number) => `Marks cannot exceed ${maxMarks}.`,
+  submissionWorkRequired: "Enter your work or attach a link.",
+  attachmentUrlInvalid: "Attachment link must be a valid http or https URL.",
   passwordTooShort: (minLength: number) => `Must be at least ${minLength} characters.`,
   passwordNeedsUppercase: "Must contain an uppercase letter.",
   passwordNeedsLowercase: "Must contain a lowercase letter.",
