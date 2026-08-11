@@ -38,7 +38,7 @@ public class AuthController(
         }
 
         var user = await authService.RegisterAsync(request, ct);
-        return Ok(new { user.Id, user.Email, user.FullName, user.Role, user.Status });
+        return Ok(new RegisterResponse(user.Id, user.Email, user.FullName, user.Role, user.Status));
     }
 
     [HttpPost("login")]

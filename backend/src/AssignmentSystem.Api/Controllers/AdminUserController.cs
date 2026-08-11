@@ -28,7 +28,7 @@ public class AdminUserController(
     public async Task<IActionResult> ApproveUser([FromBody] ApproveUserRequest request, CancellationToken ct)
     {
         var user = await authService.ApproveAsync(request.UserId, request.Approve, request.StudentSectionId, ct);
-        return Ok(new { user.Id, user.Email, user.FullName, user.Role, user.Status });
+        return Ok(new ApproveUserResponse(user.Id, user.Email, user.FullName, user.Role, user.Status));
     }
 
     [HttpGet]
