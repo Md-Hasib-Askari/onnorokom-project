@@ -27,7 +27,13 @@ export const authCookieOptions = {
   maxAge: REFRESH_TOKEN_MAX_AGE_SECONDS,
 } as const;
 
+const ROLE_HOMES: Record<UserRole, string> = {
+  [UserRole.Admin]: ROUTES.adminUsers,
+  [UserRole.Teacher]: ROUTES.teacher,
+  [UserRole.Student]: ROUTES.student,
+};
+
 /** Where a signed-in user lands when they have no specific destination. */
 export function roleHome(role: UserRole) {
-  return role === UserRole.Admin ? ROUTES.adminUsers : ROUTES.dashboard;
+  return ROLE_HOMES[role];
 }

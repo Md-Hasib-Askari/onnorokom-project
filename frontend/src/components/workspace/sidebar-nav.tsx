@@ -2,48 +2,47 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  UsersIcon,
-  GraduationCapIcon,
-  LayersIcon,
-  BookOpenIcon,
-  ClipboardListIcon,
-  SettingsIcon,
-} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
-type SidebarNavItem = {
+/**
+ * `icon` is a rendered element rather than a component type: the item lists are built in
+ * Server Components, and a component reference cannot cross the server/client boundary
+ * while an already-rendered element can.
+ */
+export type SidebarNavItem = {
   href: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ReactNode;
   enabled: boolean;
 };
 
-const navItems: SidebarNavItem[] = [
-  { href: ROUTES.adminUsers, label: "Users", icon: UsersIcon, enabled: true },
-  { href: ROUTES.adminGrades, label: "Grades", icon: GraduationCapIcon, enabled: true },
-  { href: ROUTES.adminSections, label: "Sections", icon: LayersIcon, enabled: true },
-  { href: ROUTES.adminSubjects, label: "Subjects", icon: BookOpenIcon, enabled: true },
-  { href: ROUTES.adminAssignments, label: "Assignments", icon: ClipboardListIcon, enabled: true },
-  { href: ROUTES.adminSettings, label: "Settings", icon: SettingsIcon, enabled: true },
-];
+function matchesPath(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
-export function SidebarNav() {
+export function SidebarNav({ items }: { items: SidebarNavItem[] }) {
   const pathname = usePathname();
+
+  /**
+   * Longest match wins, so an overview item at `/teacher` does not stay lit while the user
+   * is inside `/teacher/assignments`.
+   */
+  const activeHref = items
+    .filter((item) => item.enabled && matchesPath(pathname, item.href))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <nav className="flex flex-1 flex-col gap-1.5 overflow-y-auto p-4">
-      {navItems.map((item) => {
+      {items.map((item) => {
         if (!item.enabled) {
           return (
             <span
               key={item.href}
               className="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm text-sidebar-foreground/40"
             >
-              <item.icon className="size-4" />
+              {item.icon}
               {item.label}
               <Badge
                 variant="outline"
@@ -55,7 +54,7 @@ export function SidebarNav() {
           );
         }
 
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const active = item.href === activeHref;
 
         return (
           <Link
@@ -66,7 +65,7 @@ export function SidebarNav() {
               active && "bg-sidebar-accent text-sidebar-foreground"
             )}
           >
-            <item.icon className="size-4" />
+            {item.icon}
             {item.label}
           </Link>
         );

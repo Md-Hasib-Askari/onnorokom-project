@@ -13,7 +13,22 @@ import {
 } from "@/lib/auth/constants";
 import { parseSessionCookie, type SessionUser } from "@/lib/auth/session-schema";
 
-const PROTECTED_PREFIXES: readonly string[] = [ROUTES.admin, ROUTES.dashboard];
+/**
+ * Prefixes only one role may enter. `/dashboard` is deliberately absent: it belongs to every
+ * signed-in user and only forwards them to their own workspace.
+ */
+const ROLE_ONLY_PREFIXES: readonly (readonly [prefix: string, role: UserRole])[] = [
+  [ROUTES.admin, UserRole.Admin],
+  [ROUTES.teacher, UserRole.Teacher],
+  [ROUTES.student, UserRole.Student],
+];
+
+const PROTECTED_PREFIXES: readonly string[] = [
+  ROUTES.admin,
+  ROUTES.teacher,
+  ROUTES.student,
+  ROUTES.dashboard,
+];
 const GUEST_ONLY_PATHS: readonly string[] = [ROUTES.login, ROUTES.register];
 
 function isExpiringSoon(iso: string): boolean {
@@ -22,8 +37,17 @@ function isExpiringSoon(iso: string): boolean {
   return expiresAt - Date.now() < REFRESH_THRESHOLD_MS;
 }
 
+function matchesPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
 function isProtectedPath(pathname: string): boolean {
-  return PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return PROTECTED_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix));
+}
+
+/** The role this path is reserved for, or null when any signed-in user may see it. */
+function requiredRoleFor(pathname: string): UserRole | null {
+  return ROLE_ONLY_PREFIXES.find(([prefix]) => matchesPrefix(pathname, prefix))?.[1] ?? null;
 }
 
 function clearAuthCookies(response: NextResponse) {
@@ -105,7 +129,8 @@ export async function proxy(request: NextRequest) {
       url.searchParams.set(NEXT_PATH_PARAM, pathname);
       return finalizeAuthCookies(NextResponse.redirect(url), refreshed, sessionInvalidated);
     }
-    if (pathname.startsWith(ROUTES.admin) && session.role !== UserRole.Admin) {
+    const requiredRole = requiredRoleFor(pathname);
+    if (requiredRole && session.role !== requiredRole) {
       return finalizeAuthCookies(NextResponse.redirect(new URL(roleHome(session.role), request.url)), refreshed, sessionInvalidated);
     }
   }
@@ -135,5 +160,13 @@ export async function proxy(request: NextRequest) {
  * so these paths must stay literal. Keep them in sync with `ROUTES`.
  */
 export const config = {
-  matcher: ["/", "/admin/:path*", "/dashboard/:path*", "/login", "/register"],
+  matcher: [
+    "/",
+    "/admin/:path*",
+    "/teacher/:path*",
+    "/student/:path*",
+    "/dashboard/:path*",
+    "/login",
+    "/register",
+  ],
 };

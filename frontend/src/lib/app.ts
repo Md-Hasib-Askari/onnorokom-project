@@ -1,5 +1,7 @@
 export const APP_NAME = "Onnorokom Assignment System";
 export const ADMIN_APP_NAME = "Onnorokom Admin";
+export const TEACHER_APP_NAME = "Onnorokom Teacher";
+export const STUDENT_APP_NAME = "Onnorokom Student";
 export const APP_DESCRIPTION = "Assignment & submission management for schools and colleges";
 
 /** `pageTitle("Sign in")` -> "Sign in | Onnorokom Assignment System". */

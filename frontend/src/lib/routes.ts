@@ -16,10 +16,34 @@ export const ROUTES = {
   adminSections: "/admin/sections",
   adminSubjects: "/admin/subjects",
   adminAssignments: "/admin/assignments",
+  adminSubmissions: "/admin/submissions",
   adminSettings: "/admin/settings",
+  teacher: "/teacher",
+  teacherSubjects: "/teacher/subjects",
+  teacherAssignments: "/teacher/assignments",
+  student: "/student",
+  studentAssignments: "/student/assignments",
 } as const;
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];
+
+/**
+ * Paths that need a runtime value. Kept out of `ROUTES` because adding functions there
+ * would poison the `AppRoute` union.
+ */
+export const ROUTE_BUILDERS = {
+  teacherAssignment: (id: string) => `${ROUTES.teacherAssignments}/${id}`,
+  studentAssignment: (id: string) => `${ROUTES.studentAssignments}/${id}`,
+} as const;
+
+/**
+ * Query-string keys the teacher assignments page reads to preselect the target of a new
+ * assignment, so "My subjects" can deep-link straight into a prefilled create dialog.
+ */
+export const ASSIGNMENT_TARGET_PARAMS = {
+  sectionId: "sectionId",
+  subjectId: "subjectId",
+} as const;
 
 /** Query-string key carrying the path to return to after a forced sign-in. */
 export const NEXT_PATH_PARAM = "next";
