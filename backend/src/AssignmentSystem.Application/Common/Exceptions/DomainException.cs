@@ -51,3 +51,10 @@ public class DuplicateEntityException(string message) : DomainException(message)
 public class InvalidTeacherException(string message) : DomainException(message);
 
 public class EntityInUseException(string message) : DomainException(message);
+
+/// <summary>
+/// Raised when the caller is authenticated and the target exists, but the resource is not theirs.
+/// Distinct from <see cref="EntityNotFoundException"/>, which is used instead wherever a 403 would
+/// itself leak the existence of a record the caller may not know about.
+/// </summary>
+public class ForbiddenException(string message) : DomainException(message);

@@ -7,6 +7,7 @@ public class Assignment : BaseEntity
 {
     public string Title { get; private set; } = null!;
     public string? Description { get; private set; }
+    public Guid SectionId { get; private set; }
     public Guid SubjectId { get; private set; }
     public Guid TeacherId { get; private set; }
     public DateTimeOffset Deadline { get; private set; }
@@ -14,6 +15,7 @@ public class Assignment : BaseEntity
     public AssignmentStatus Status { get; private set; }
     public bool AllowLateSubmission { get; private set; }
 
+    public virtual Section? Section { get; private set; }
     public virtual Subject? Subject { get; private set; }
     public virtual AuthUser? Teacher { get; private set; }
 
@@ -23,6 +25,7 @@ public class Assignment : BaseEntity
 
     public static Assignment Create(
         string title,
+        Guid sectionId,
         Guid subjectId,
         Guid teacherId,
         DateTimeOffset deadline,
@@ -32,7 +35,8 @@ public class Assignment : BaseEntity
     {
         return new Assignment
         {
-            Title = title,
+            Title = title.Trim(),
+            SectionId = sectionId,
             SubjectId = subjectId,
             TeacherId = teacherId,
             Deadline = deadline,
@@ -42,4 +46,41 @@ public class Assignment : BaseEntity
             Status = AssignmentStatus.Draft
         };
     }
+
+    /// <summary>
+    /// Section, subject and author are fixed at creation: changing them would move the assignment
+    /// to a different audience, invalidating any submissions already attached to it.
+    /// </summary>
+    public void UpdateDetails(
+        string title,
+        string? description,
+        DateTimeOffset deadline,
+        decimal maxMarks,
+        bool allowLateSubmission)
+    {
+        Title = title.Trim();
+        Description = description;
+        Deadline = deadline;
+        MaxMarks = maxMarks;
+        AllowLateSubmission = allowLateSubmission;
+    }
+
+    /// <summary>
+    /// Publishing is one-way. Callers pre-check <see cref="Status"/> and surface a domain error;
+    /// the throw here is a last-line assertion so a missed check cannot silently no-op.
+    /// </summary>
+    public void Publish()
+    {
+        if (Status == AssignmentStatus.Published)
+        {
+            throw new InvalidOperationException("Assignment is already published.");
+        }
+
+        Status = AssignmentStatus.Published;
+    }
+
+    public bool IsPastDeadline(DateTimeOffset now) => now > Deadline;
+
+    public bool IsAcceptingSubmissions(DateTimeOffset now) =>
+        Status == AssignmentStatus.Published && (!IsPastDeadline(now) || AllowLateSubmission);
 }

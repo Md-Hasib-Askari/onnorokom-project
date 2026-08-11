@@ -26,7 +26,12 @@ export const adminAssignmentListResponseSchema = z.array(assignmentListItemSchem
 
 // ---- GET /api/admin/submissions ----
 
-export const submissionStatusSchema = z.enum(["Submitted", "Late", "Graded", "Resubmitted"]);
+export const submissionStatusSchema = z.enum([
+  "Submitted",
+  "Resubmitted",
+  "Returned",
+  "Graded",
+]);
 export type SubmissionStatus = z.infer<typeof submissionStatusSchema>;
 export const SubmissionStatus = submissionStatusSchema.enum;
 

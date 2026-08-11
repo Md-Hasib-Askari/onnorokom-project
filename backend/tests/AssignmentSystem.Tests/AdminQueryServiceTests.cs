@@ -10,7 +10,8 @@ public class AdminQueryServiceTests
     [Fact]
     public async Task GetAllAssignments_MapsAssignmentFields()
     {
-        var assignment = Assignment.Create("Essay", Guid.NewGuid(), Guid.NewGuid(), DateTimeOffset.UtcNow.AddDays(7), 100);
+        var assignment = Assignment.Create("Essay", Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            DateTimeOffset.UtcNow.AddDays(7), 100);
         var repo = new FakeAssignmentRepository([assignment]);
 
         var sut = new AdminQueryService(repo, new FakeSubmissionRepository([]), TestMappers.CreateMapper());

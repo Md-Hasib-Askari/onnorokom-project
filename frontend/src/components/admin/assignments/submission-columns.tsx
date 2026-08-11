@@ -9,11 +9,11 @@ import {
 import { EMPTY_CELL } from "@/lib/messages";
 import { Badge } from "@/components/ui/badge";
 
-const statusVariant: Record<SubmissionListItem["status"], "default" | "secondary" | "destructive"> = {
+const statusVariant: Record<SubmissionListItem["status"], "default" | "secondary" | "outline"> = {
   [SubmissionStatus.Graded]: "default",
   [SubmissionStatus.Submitted]: "secondary",
   [SubmissionStatus.Resubmitted]: "secondary",
-  [SubmissionStatus.Late]: "destructive",
+  [SubmissionStatus.Returned]: "outline",
 };
 
 export function buildSubmissionColumns(): ColumnDef<SubmissionListItem>[] {
