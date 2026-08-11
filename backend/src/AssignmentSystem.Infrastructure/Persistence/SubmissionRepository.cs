@@ -43,6 +43,22 @@ public class SubmissionRepository(AppDbContext dbContext) : ISubmissionRepositor
             .FirstOrDefaultAsync(s => s.AssignmentId == assignmentId && s.StudentId == studentId, ct);
     }
 
+    public async Task<List<Submission>> GetByStudentAndAssignmentIdsAsync(
+        Guid studentId,
+        IEnumerable<Guid> assignmentIds,
+        CancellationToken ct = default)
+    {
+        var ids = assignmentIds.ToList();
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        return await dbContext.Submissions
+            .Where(s => s.StudentId == studentId && ids.Contains(s.AssignmentId))
+            .ToListAsync(ct);
+    }
+
     public async Task<Dictionary<Guid, SubmissionCounts>> GetCountsByAssignmentIdsAsync(
         IEnumerable<Guid> assignmentIds,
         CancellationToken ct = default)

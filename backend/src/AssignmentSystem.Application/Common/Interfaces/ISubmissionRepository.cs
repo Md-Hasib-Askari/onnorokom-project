@@ -9,6 +9,16 @@ public interface ISubmissionRepository
     Task<Submission?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<List<Submission>> GetByAssignmentAsync(Guid assignmentId, CancellationToken ct = default);
     Task<Submission?> GetByAssignmentAndStudentAsync(Guid assignmentId, Guid studentId, CancellationToken ct = default);
+
+    /// <summary>
+    /// One student's own rows across a set of assignments, for left-joining their submission state
+    /// onto an assignment list in a single round trip.
+    /// </summary>
+    Task<List<Submission>> GetByStudentAndAssignmentIdsAsync(
+        Guid studentId,
+        IEnumerable<Guid> assignmentIds,
+        CancellationToken ct = default);
+
     Task<Dictionary<Guid, SubmissionCounts>> GetCountsByAssignmentIdsAsync(IEnumerable<Guid> assignmentIds, CancellationToken ct = default);
 
     /// <summary>

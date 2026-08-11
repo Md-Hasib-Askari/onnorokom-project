@@ -1,5 +1,6 @@
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Domain.Entities;
+using AssignmentSystem.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace AssignmentSystem.Infrastructure.Persistence;
@@ -22,6 +23,14 @@ public class AssignmentRepository(AppDbContext dbContext) : IAssignmentRepositor
     {
         return await WithDetails()
             .Where(a => a.TeacherId == teacherId)
+            .OrderByDescending(a => a.CreatedAt)
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<Assignment>> GetPublishedForSectionAsync(Guid sectionId, CancellationToken ct = default)
+    {
+        return await WithDetails()
+            .Where(a => a.SectionId == sectionId && a.Status == AssignmentStatus.Published)
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync(ct);
     }

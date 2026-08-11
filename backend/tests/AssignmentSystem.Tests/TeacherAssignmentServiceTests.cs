@@ -191,6 +191,11 @@ public class TeacherAssignmentServiceTests
         public Task<List<Assignment>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default)
             => Task.FromResult(Items.Where(a => a.TeacherId == teacherId).ToList());
 
+        public Task<List<Assignment>> GetPublishedForSectionAsync(Guid sectionId, CancellationToken ct = default)
+            => Task.FromResult(Items
+                .Where(a => a.SectionId == sectionId && a.Status == AssignmentStatus.Published)
+                .ToList());
+
         public Task<bool> HasSubmissionsAsync(Guid assignmentId, CancellationToken ct = default)
             => Task.FromResult(submissions.Items.Any(s => s.AssignmentId == assignmentId));
 
@@ -225,6 +230,17 @@ public class TeacherAssignmentServiceTests
 
         public Task<Submission?> GetByAssignmentAndStudentAsync(Guid assignmentId, Guid studentId, CancellationToken ct = default)
             => Task.FromResult(Items.FirstOrDefault(s => s.AssignmentId == assignmentId && s.StudentId == studentId));
+
+        public Task<List<Submission>> GetByStudentAndAssignmentIdsAsync(
+            Guid studentId,
+            IEnumerable<Guid> assignmentIds,
+            CancellationToken ct = default)
+        {
+            var ids = assignmentIds.ToHashSet();
+            return Task.FromResult(Items
+                .Where(s => s.StudentId == studentId && ids.Contains(s.AssignmentId))
+                .ToList());
+        }
 
         public Task<Dictionary<Guid, SubmissionCounts>> GetCountsByAssignmentIdsAsync(
             IEnumerable<Guid> assignmentIds,
