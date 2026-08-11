@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlusIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -88,7 +88,7 @@ export function CreateAssignmentDialog({
   });
 
   const pairs = sectionSubjects.data ?? [];
-  const selectedSectionId = form.watch("sectionId");
+  const selectedSectionId = useWatch({ control: form.control, name: "sectionId" });
   const sections = sectionOptions(pairs);
   const subjects = subjectOptions(pairs, selectedSectionId);
 
