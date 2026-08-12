@@ -5,6 +5,7 @@ namespace AssignmentSystem.Domain.Entities;
 public class TeacherProfile : BaseEntity
 {
     public Guid AuthUserId { get; private set; }
+    public string? TeacherCode { get; private set; }
     public string? Department { get; private set; }
     public string? Designation { get; private set; }
     public string? Qualification { get; private set; }
@@ -19,6 +20,7 @@ public class TeacherProfile : BaseEntity
     }
 
     public void UpdateDetails(
+        string? teacherCode,
         string? department,
         string? designation,
         string? qualification,
@@ -26,6 +28,7 @@ public class TeacherProfile : BaseEntity
         string? address,
         DateTimeOffset? dateOfJoining)
     {
+        TeacherCode = teacherCode;
         Department = department;
         Designation = designation;
         Qualification = qualification;

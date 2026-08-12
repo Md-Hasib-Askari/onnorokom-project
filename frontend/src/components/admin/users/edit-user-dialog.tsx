@@ -75,6 +75,7 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
       status: AccountStatus.Approved,
       isActive: true,
       studentSectionId: undefined,
+      teacherProfile: { teacherCode: undefined },
     },
   });
 
@@ -86,6 +87,7 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
       status: user.status === AccountStatus.Rejected ? AccountStatus.Rejected : AccountStatus.Approved,
       isActive: user.isActive,
       studentSectionId: user.studentSectionId ?? undefined,
+      teacherProfile: { teacherCode: user.teacherCode ?? undefined },
     });
   }, [user, form]);
 
@@ -179,6 +181,21 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
                 </FormItem>
               )}
             />
+            {user.role === UserRole.Teacher && (
+              <FormField
+                control={form.control}
+                name="teacherProfile.teacherCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Teacher code</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             {user.role === UserRole.Student && (
               <>
                 <FormItem>

@@ -5,6 +5,7 @@ import type { AdminUserSummary } from "@/lib/api/schemas/admin-users.schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { enrollmentColumns } from "./enrollment-columns";
+import { teacherColumns } from "./teacher-columns";
 
 export function buildPendingColumns(options: {
   onApprove: (user: AdminUserSummary, approve: boolean) => void;
@@ -19,6 +20,7 @@ export function buildPendingColumns(options: {
       cell: ({ row }) => <Badge variant="outline">{row.original.role}</Badge>,
     },
     ...enrollmentColumns,
+    ...teacherColumns,
     {
       accessorKey: "createdAt",
       header: "Requested",

@@ -301,10 +301,11 @@ public class AdminUserServiceTests
         var dateOfJoining = new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
         await _sut.UpdateUserAsync(user.Id, new("Teacher", "t@test.com", AccountStatus.Approved, true,
-            TeacherProfile: new TeacherProfileUpdateRequest("Science", "Senior Teacher", "MSc", "0170000000", "Dhaka", dateOfJoining)));
+            TeacherProfile: new TeacherProfileUpdateRequest("T-001", "Science", "Senior Teacher", "MSc", "0170000000", "Dhaka", dateOfJoining)));
 
         var profile = Assert.Single(_profiles.TeacherProfiles);
         Assert.Equal(user.Id, profile.AuthUserId);
+        Assert.Equal("T-001", profile.TeacherCode);
         Assert.Equal("Science", profile.Department);
         Assert.Equal("Senior Teacher", profile.Designation);
         Assert.Equal("MSc", profile.Qualification);
@@ -320,13 +321,14 @@ public class AdminUserServiceTests
         user.Approve();
         _users.Users.Add(user);
         var profile = TeacherProfile.Create(user.Id);
-        profile.UpdateDetails("Old Dept", "Old Title", "Old Qual", "Old Phone", "Old Address", null);
+        profile.UpdateDetails("T-OLD", "Old Dept", "Old Title", "Old Qual", "Old Phone", "Old Address", null);
         _profiles.TeacherProfiles.Add(profile);
 
         await _sut.UpdateUserAsync(user.Id, new("Teacher", "t@test.com", AccountStatus.Approved, true,
-            TeacherProfile: new TeacherProfileUpdateRequest("New Dept", "New Title", "New Qual", "New Phone", "New Address", null)));
+            TeacherProfile: new TeacherProfileUpdateRequest("T-NEW", "New Dept", "New Title", "New Qual", "New Phone", "New Address", null)));
 
         Assert.Single(_profiles.TeacherProfiles);
+        Assert.Equal("T-NEW", profile.TeacherCode);
         Assert.Equal("New Dept", profile.Department);
         Assert.Equal("New Title", profile.Designation);
         Assert.Equal("New Qual", profile.Qualification);
@@ -341,7 +343,7 @@ public class AdminUserServiceTests
         user.Approve();
         _users.Users.Add(user);
         var profile = TeacherProfile.Create(user.Id);
-        profile.UpdateDetails("Dept", "Title", "Qual", "Phone", "Address", null);
+        profile.UpdateDetails("T-001", "Dept", "Title", "Qual", "Phone", "Address", null);
         _profiles.TeacherProfiles.Add(profile);
 
         await _sut.UpdateUserAsync(user.Id, new("Teacher", "t@test.com", AccountStatus.Approved, true));
@@ -662,6 +664,9 @@ public class AdminUserServiceTests
 
         public Task<TeacherProfile?> GetTeacherByUserIdAsync(Guid authUserId, CancellationToken ct = default)
             => Task.FromResult(TeacherProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));
+
+        public Task<List<TeacherProfile>> GetTeachersByUserIdsAsync(IEnumerable<Guid> authUserIds, CancellationToken ct = default)
+            => Task.FromResult(TeacherProfiles.Where(p => authUserIds.Contains(p.AuthUserId)).ToList());
 
         public Task<AdminProfile?> GetAdminByUserIdAsync(Guid authUserId, CancellationToken ct = default)
             => Task.FromResult(AdminProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));

@@ -7,6 +7,7 @@ public class TeacherProfileUpdateRequestValidator : AbstractValidator<TeacherPro
 {
     public TeacherProfileUpdateRequestValidator()
     {
+        RuleFor(x => x.TeacherCode).MaximumLength(50);
         RuleFor(x => x.Department).MaximumLength(100);
         RuleFor(x => x.Designation).MaximumLength(100);
         RuleFor(x => x.Qualification).MaximumLength(200);

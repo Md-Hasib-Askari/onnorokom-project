@@ -527,6 +527,9 @@ public class AuthServiceTests
         public Task<TeacherProfile?> GetTeacherByUserIdAsync(Guid authUserId, CancellationToken ct = default)
             => Task.FromResult(TeacherProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));
 
+        public Task<List<TeacherProfile>> GetTeachersByUserIdsAsync(IEnumerable<Guid> authUserIds, CancellationToken ct = default)
+            => Task.FromResult(TeacherProfiles.Where(p => authUserIds.Contains(p.AuthUserId)).ToList());
+
         public Task<AdminProfile?> GetAdminByUserIdAsync(Guid authUserId, CancellationToken ct = default)
             => Task.FromResult(AdminProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));
 

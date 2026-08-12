@@ -24,6 +24,13 @@ public static class UserListItemDtoFactory
         var sections = await sectionRepository.GetByIdsAsync(sectionIds, ct);
         var sectionById = sections.ToDictionary(s => s.Id);
 
+        var teacherUserIds = users
+            .Where(u => u.Role == UserRole.Teacher)
+            .Select(u => u.Id)
+            .ToList();
+        var teacherProfiles = await profileRepository.GetTeachersByUserIdsAsync(teacherUserIds, ct);
+        var teacherProfileByUserId = teacherProfiles.ToDictionary(p => p.AuthUserId);
+
         var dtos = new List<UserListItemDto>(users.Count);
         foreach (var user in users)
         {
@@ -41,6 +48,12 @@ public static class UserListItemDtoFactory
                 }
             }
 
+            string? teacherCode = null;
+            if (teacherProfileByUserId.TryGetValue(user.Id, out var teacherProfile))
+            {
+                teacherCode = teacherProfile.TeacherCode;
+            }
+
             dtos.Add(new UserListItemDto(
                 user.Id,
                 user.FullName,
@@ -51,7 +64,8 @@ public static class UserListItemDtoFactory
                 user.IsActive,
                 sectionId,
                 sectionName,
-                gradeName));
+                gradeName,
+                teacherCode));
         }
 
         return dtos;

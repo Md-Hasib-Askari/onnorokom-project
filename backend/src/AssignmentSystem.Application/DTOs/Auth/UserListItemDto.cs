@@ -12,4 +12,5 @@ public record UserListItemDto(
     bool IsActive,
     Guid? StudentSectionId = null,
     string? SectionName = null,
-    string? GradeName = null);
+    string? GradeName = null,
+    string? TeacherCode = null);

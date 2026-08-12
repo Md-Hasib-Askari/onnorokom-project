@@ -358,6 +358,9 @@ public class StudentAssignmentServiceTests
         public Task<TeacherProfile?> GetTeacherByUserIdAsync(Guid authUserId, CancellationToken ct = default)
             => Task.FromResult<TeacherProfile?>(null);
 
+        public Task<List<TeacherProfile>> GetTeachersByUserIdsAsync(IEnumerable<Guid> authUserIds, CancellationToken ct = default)
+            => Task.FromResult(new List<TeacherProfile>());
+
         public Task<AdminProfile?> GetAdminByUserIdAsync(Guid authUserId, CancellationToken ct = default)
             => Task.FromResult<AdminProfile?>(null);
 

@@ -23,6 +23,7 @@ export const adminUserSummarySchema = z.object({
   studentSectionId: z.string().nullable(),
   sectionName: z.string().nullable(),
   gradeName: z.string().nullable(),
+  teacherCode: z.string().nullable(),
 });
 export type AdminUserSummary = z.infer<typeof adminUserSummarySchema>;
 
@@ -72,6 +73,7 @@ export type AdminCreateUserResponse = z.infer<typeof adminCreateUserResponseSche
 // ---- PUT /api/admin/users/:id ----
 
 export const teacherProfileInputSchema = z.object({
+  teacherCode: z.string().trim().optional(),
   department: z.string().trim().optional(),
   designation: z.string().trim().optional(),
   qualification: z.string().trim().optional(),

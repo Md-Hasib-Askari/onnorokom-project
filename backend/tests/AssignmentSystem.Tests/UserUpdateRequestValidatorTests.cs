@@ -35,7 +35,7 @@ public class UserUpdateRequestValidatorTests
     public void Validate_TeacherProfileTooLongDepartment_Fails()
     {
         var request = new UserUpdateRequest("Name", "a@test.com", AccountStatus.Approved, true,
-            TeacherProfile: new TeacherProfileUpdateRequest(new string('x', 101), null, null, null, null, null));
+            TeacherProfile: new TeacherProfileUpdateRequest(null, new string('x', 101), null, null, null, null, null));
 
         var result = _validator.Validate(request);
 

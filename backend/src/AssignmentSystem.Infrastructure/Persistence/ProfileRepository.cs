@@ -21,6 +21,11 @@ public class ProfileRepository(AppDbContext dbContext) : IProfileRepository
         return await dbContext.TeacherProfiles.FirstOrDefaultAsync(p => p.AuthUserId == authUserId, ct);
     }
 
+    public async Task<List<TeacherProfile>> GetTeachersByUserIdsAsync(IEnumerable<Guid> authUserIds, CancellationToken ct = default)
+    {
+        return await dbContext.TeacherProfiles.Where(p => authUserIds.Contains(p.AuthUserId)).ToListAsync(ct);
+    }
+
     public async Task<AdminProfile?> GetAdminByUserIdAsync(Guid authUserId, CancellationToken ct = default)
     {
         return await dbContext.AdminProfiles.FirstOrDefaultAsync(p => p.AuthUserId == authUserId, ct);

@@ -189,12 +189,12 @@ public class AdminUserService(
         if (profile is null)
         {
             profile = TeacherProfile.Create(user.Id);
-            profile.UpdateDetails(request.Department, request.Designation, request.Qualification, request.PhoneNumber, request.Address, request.DateOfJoining);
+            profile.UpdateDetails(request.TeacherCode, request.Department, request.Designation, request.Qualification, request.PhoneNumber, request.Address, request.DateOfJoining);
             await profileRepository.AddAsync(profile, ct);
             return;
         }
 
-        profile.UpdateDetails(request.Department, request.Designation, request.Qualification, request.PhoneNumber, request.Address, request.DateOfJoining);
+        profile.UpdateDetails(request.TeacherCode, request.Department, request.Designation, request.Qualification, request.PhoneNumber, request.Address, request.DateOfJoining);
         await profileRepository.UpdateAsync(profile, ct);
     }
 
