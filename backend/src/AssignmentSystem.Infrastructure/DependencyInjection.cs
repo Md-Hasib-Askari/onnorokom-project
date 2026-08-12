@@ -41,7 +41,6 @@ public static class DependencyInjection
         {
             services.AddScoped<IEmailSender, SmtpEmailSender>();
         }
-        services.AddScoped<DbInitializer>();
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.Configure<BCryptSettings>(configuration.GetSection(BCryptSettings.SectionName));

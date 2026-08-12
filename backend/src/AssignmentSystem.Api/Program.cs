@@ -5,10 +5,10 @@ using AssignmentSystem.Api.Security;
 using AssignmentSystem.Application;
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Infrastructure;
-using AssignmentSystem.Infrastructure.Persistence;
 using AssignmentSystem.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,7 +17,27 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
-builder.Services.AddOpenApi();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Assignment System API",
+        Version = "v1",
+        Description = "REST API for the role-based Assignment & Submission Management System."
+    });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Paste the access token returned by /api/auth/login."
+    });
+
+    options.OperationFilter<AssignmentSystem.Api.Swagger.AuthorizeOperationFilter>();
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
@@ -46,15 +66,13 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var initializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
-    await initializer.InitializeAsync();
-}
-
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Assignment System API v1");
+    });
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
