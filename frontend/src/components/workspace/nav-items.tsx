@@ -6,6 +6,7 @@ import {
   LayersIcon,
   LayoutDashboardIcon,
   SettingsIcon,
+  UserCircleIcon,
   UsersIcon,
 } from "lucide-react";
 
@@ -22,15 +23,18 @@ export const ADMIN_NAV_ITEMS: SidebarNavItem[] = [
   { href: ROUTES.adminAssignments, label: "Assignments", icon: <ClipboardListIcon className={ICON_CLASS} />, enabled: true },
   { href: ROUTES.adminSubmissions, label: "Submissions", icon: <FileCheckIcon className={ICON_CLASS} />, enabled: true },
   { href: ROUTES.adminSettings, label: "Settings", icon: <SettingsIcon className={ICON_CLASS} />, enabled: true },
+  { href: ROUTES.profile, label: "Profile", icon: <UserCircleIcon className={ICON_CLASS} />, enabled: true },
 ];
 
 export const TEACHER_NAV_ITEMS: SidebarNavItem[] = [
   { href: ROUTES.teacher, label: "Overview", icon: <LayoutDashboardIcon className={ICON_CLASS} />, enabled: true },
   { href: ROUTES.teacherSubjects, label: "My subjects", icon: <BookOpenIcon className={ICON_CLASS} />, enabled: true },
   { href: ROUTES.teacherAssignments, label: "Assignments", icon: <ClipboardListIcon className={ICON_CLASS} />, enabled: true },
+  { href: ROUTES.profile, label: "Profile", icon: <UserCircleIcon className={ICON_CLASS} />, enabled: true },
 ];
 
 export const STUDENT_NAV_ITEMS: SidebarNavItem[] = [
   { href: ROUTES.student, label: "Overview", icon: <LayoutDashboardIcon className={ICON_CLASS} />, enabled: true },
   { href: ROUTES.studentAssignments, label: "Assignments", icon: <ClipboardListIcon className={ICON_CLASS} />, enabled: true },
+  { href: ROUTES.profile, label: "Profile", icon: <UserCircleIcon className={ICON_CLASS} />, enabled: true },
 ];
