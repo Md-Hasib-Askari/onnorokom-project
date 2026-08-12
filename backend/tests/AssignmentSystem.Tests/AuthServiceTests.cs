@@ -13,16 +13,18 @@ public class AuthServiceTests
     private readonly FakeUserRepository _repo = new();
     private readonly FakeProfileRepository _profiles = new();
     private readonly FakeSectionRepository _sections = new();
+    private readonly FakePasswordResetCodeRepository _resetCodes = new();
     private readonly FakePasswordHasher _hasher = new();
     private readonly FakeTokenService _tokens = new();
     private readonly FakeSystemSettingService _settings = new();
+    private readonly FakeEmailSender _emailSender = new();
     private readonly AuthService _sut;
 
     public AuthServiceTests()
     {
         _sut = new AuthService(
-            _repo, _sections, _profiles, _hasher, _tokens, new FakeTransactionService(),
-            new ProfileProvisioningService(_profiles), _settings);
+            _repo, _sections, _profiles, _resetCodes, _hasher, _tokens, new FakeTransactionService(),
+            new ProfileProvisioningService(_profiles), _settings, _emailSender);
     }
 
     private Section AddSection(string name = "Section A")
@@ -658,6 +660,36 @@ public class AuthServiceTests
         {
             _refreshTokensIssued++;
             return _refreshTokensIssued == 1 ? "refresh-token" : $"refresh-token-{_refreshTokensIssued}";
+        }
+    }
+
+    private sealed class FakePasswordResetCodeRepository : IPasswordResetCodeRepository
+    {
+        public List<PasswordResetCode> Codes { get; } = new();
+
+        public Task<PasswordResetCode?> GetLatestForUserAsync(Guid authUserId, CancellationToken ct = default)
+            => Task.FromResult(Codes.Where(c => c.AuthUserId == authUserId)
+                .OrderByDescending(c => c.CreatedAt)
+                .FirstOrDefault());
+
+        public Task AddAsync(PasswordResetCode code, CancellationToken ct = default)
+        {
+            Codes.Add(code);
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(PasswordResetCode code, CancellationToken ct = default)
+            => Task.CompletedTask;
+    }
+
+    private sealed class FakeEmailSender : IEmailSender
+    {
+        public List<(string ToEmail, string Subject, string HtmlBody)> SentEmails { get; } = new();
+
+        public Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken ct = default)
+        {
+            SentEmails.Add((toEmail, subject, htmlBody));
+            return Task.CompletedTask;
         }
     }
 }

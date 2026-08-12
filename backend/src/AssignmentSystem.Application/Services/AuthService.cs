@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using AssignmentSystem.Application.Common;
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
@@ -11,12 +12,17 @@ public class AuthService(
     IUserRepository userRepository,
     ISectionRepository sectionRepository,
     IProfileRepository profileRepository,
+    IPasswordResetCodeRepository passwordResetCodeRepository,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
     ITransactionService transactionService,
     IProfileProvisioningService profileProvisioningService,
-    ISystemSettingService systemSettingService) : IAuthService
+    ISystemSettingService systemSettingService,
+    IEmailSender emailSender) : IAuthService
 {
+    private static readonly TimeSpan ResetCodeLifetime = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan ResetCodeCooldown = TimeSpan.FromSeconds(60);
+
     public async Task<AuthUser> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
         // Checked before the email lookup so a closed role cannot be used to probe which addresses
@@ -175,6 +181,62 @@ public class AuthService(
         return await UserListItemDtoFactory.BuildAsync(users, profileRepository, sectionRepository, ct);
     }
 
+    /// <summary>
+    /// Always succeeds from the caller's perspective, even when the email is unknown, so the
+    /// endpoint cannot be used to discover registered addresses.
+    /// </summary>
+    public async Task ForgotPasswordAsync(string email, CancellationToken ct = default)
+    {
+        var user = await userRepository.GetByEmailAsync(email.Trim().ToLowerInvariant(), ct);
+        if (user is null)
+        {
+            return;
+        }
+
+        var latest = await passwordResetCodeRepository.GetLatestForUserAsync(user.Id, ct);
+        if (latest is not null && latest.CreatedAt.Add(ResetCodeCooldown) > DateTimeOffset.UtcNow)
+        {
+            throw new PasswordResetRateLimitedException();
+        }
+
+        var code = RandomNumberGenerator.GetInt32(100_000, 1_000_000).ToString();
+        var resetCode = PasswordResetCode.Create(user.Id, passwordHasher.Hash(code), DateTimeOffset.UtcNow.Add(ResetCodeLifetime));
+        await passwordResetCodeRepository.AddAsync(resetCode, ct);
+
+        await emailSender.SendAsync(
+            user.Email,
+            "Your password reset code",
+            $"<p>Hi {user.FullName},</p><p>Your password reset code is <strong>{code}</strong>. It expires in 10 minutes. If you didn't request this, you can ignore this email.</p>",
+            ct);
+    }
+
+    public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default)
+    {
+        var user = await userRepository.GetByEmailAsync(request.Email.Trim().ToLowerInvariant(), ct);
+        var resetCode = user is null ? null : await passwordResetCodeRepository.GetLatestForUserAsync(user.Id, ct);
+
+        if (user is null || resetCode is null || !resetCode.IsUsable(DateTimeOffset.UtcNow))
+        {
+            throw new InvalidOrExpiredResetCodeException();
+        }
+
+        if (!passwordHasher.Verify(request.Code, resetCode.CodeHash))
+        {
+            resetCode.RegisterFailedAttempt();
+            await passwordResetCodeRepository.UpdateAsync(resetCode, ct);
+            throw new InvalidOrExpiredResetCodeException();
+        }
+
+        resetCode.Consume();
+        user.SetPassword(passwordHasher.Hash(request.NewPassword));
+
+        await transactionService.ExecuteAsync(async transactionCt =>
+        {
+            await passwordResetCodeRepository.UpdateAsync(resetCode, transactionCt);
+            await userRepository.UpdateAsync(user, transactionCt);
+        }, ct);
+    }
+
     private void EnsureUsable(AuthUser user)
     {
         switch (user.Status)
@@ -210,5 +272,6 @@ public class AuthService(
             user.FullName,
             user.Email,
             user.Role,
-            user.Status);
+            user.Status,
+            user.MustChangePassword);
 }

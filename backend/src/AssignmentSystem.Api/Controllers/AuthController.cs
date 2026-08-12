@@ -13,7 +13,9 @@ public class AuthController(
     ISystemSettingService systemSettingService,
     IValidator<RegisterRequest> registerValidator,
     IValidator<LoginRequest> loginValidator,
-    IValidator<RefreshTokenRequest> refreshTokenValidator) : ControllerBase
+    IValidator<RefreshTokenRequest> refreshTokenValidator,
+    IValidator<ForgotPasswordRequest> forgotPasswordValidator,
+    IValidator<ResetPasswordRequest> resetPasswordValidator) : ControllerBase
 {
     /// <summary>
     /// Lets the sign-up page show only the roles an admin has opened. Anonymous by necessity, and
@@ -80,6 +82,34 @@ public class AuthController(
         }
 
         await authService.LogoutAsync(request.RefreshToken, ct);
+        return NoContent();
+    }
+
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken ct)
+    {
+        var validation = await forgotPasswordValidator.ValidateAsync(request, ct);
+        if (!validation.IsValid)
+        {
+            throw new ValidationException(validation.Errors);
+        }
+
+        await authService.ForgotPasswordAsync(request.Email, ct);
+        return NoContent();
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken ct)
+    {
+        var validation = await resetPasswordValidator.ValidateAsync(request, ct);
+        if (!validation.IsValid)
+        {
+            throw new ValidationException(validation.Errors);
+        }
+
+        await authService.ResetPasswordAsync(request, ct);
         return NoContent();
     }
 }

@@ -10,4 +10,5 @@ public record AuthResponse(
     string FullName,
     string Email,
     UserRole Role,
-    AccountStatus Status);
+    AccountStatus Status,
+    bool MustChangePassword);
