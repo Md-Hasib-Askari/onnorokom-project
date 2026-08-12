@@ -17,13 +17,6 @@ public class AdminUserController(
     IValidator<UserCreateRequest> createValidator,
     IValidator<UserUpdateRequest> updateValidator) : ControllerBase
 {
-    [HttpGet("pending")]
-    public async Task<IActionResult> GetPendingUsers(CancellationToken ct)
-    {
-        var users = await authService.GetPendingUsersAsync(ct);
-        return Ok(users);
-    }
-
     [HttpPost("approve")]
     public async Task<IActionResult> ApproveUser([FromBody] ApproveUserRequest request, CancellationToken ct)
     {

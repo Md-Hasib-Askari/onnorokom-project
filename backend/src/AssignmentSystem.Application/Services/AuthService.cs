@@ -5,6 +5,7 @@ using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.DTOs.Auth;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
+using Microsoft.Extensions.Options;
 
 namespace AssignmentSystem.Application.Services;
 
@@ -18,10 +19,11 @@ public class AuthService(
     ITransactionService transactionService,
     IProfileProvisioningService profileProvisioningService,
     ISystemSettingService systemSettingService,
-    IEmailSender emailSender) : IAuthService
+    IEmailSender emailSender,
+    IOptions<PasswordResetSettings> passwordResetSettings) : IAuthService
 {
-    private static readonly TimeSpan ResetCodeLifetime = TimeSpan.FromMinutes(10);
-    private static readonly TimeSpan ResetCodeCooldown = TimeSpan.FromSeconds(60);
+    private readonly TimeSpan _resetCodeLifetime = TimeSpan.FromMinutes(passwordResetSettings.Value.CodeLifetimeMinutes);
+    private readonly TimeSpan _resetCodeCooldown = TimeSpan.FromSeconds(passwordResetSettings.Value.CodeCooldownSeconds);
 
     public async Task<AuthUser> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
@@ -175,12 +177,6 @@ public class AuthService(
         return studentSectionId;
     }
 
-    public async Task<List<UserListItemDto>> GetPendingUsersAsync(CancellationToken ct = default)
-    {
-        var users = await userRepository.GetByStatusAsync(AccountStatus.Pending, ct);
-        return await UserListItemDtoFactory.BuildAsync(users, profileRepository, sectionRepository, ct);
-    }
-
     /// <summary>
     /// Always succeeds from the caller's perspective, even when the email is unknown, so the
     /// endpoint cannot be used to discover registered addresses.
@@ -194,19 +190,19 @@ public class AuthService(
         }
 
         var latest = await passwordResetCodeRepository.GetLatestForUserAsync(user.Id, ct);
-        if (latest is not null && latest.CreatedAt.Add(ResetCodeCooldown) > DateTimeOffset.UtcNow)
+        if (latest is not null && latest.CreatedAt.Add(_resetCodeCooldown) > DateTimeOffset.UtcNow)
         {
             throw new PasswordResetRateLimitedException();
         }
 
         var code = RandomNumberGenerator.GetInt32(100_000, 1_000_000).ToString();
-        var resetCode = PasswordResetCode.Create(user.Id, passwordHasher.Hash(code), DateTimeOffset.UtcNow.Add(ResetCodeLifetime));
+        var resetCode = PasswordResetCode.Create(user.Id, passwordHasher.Hash(code), DateTimeOffset.UtcNow.Add(_resetCodeLifetime));
         await passwordResetCodeRepository.AddAsync(resetCode, ct);
 
         await emailSender.SendAsync(
             user.Email,
             "Your password reset code",
-            $"<p>Hi {user.FullName},</p><p>Your password reset code is <strong>{code}</strong>. It expires in 10 minutes. If you didn't request this, you can ignore this email.</p>",
+            $"<p>Hi {user.FullName},</p><p>Your password reset code is <strong>{code}</strong>. It expires in {passwordResetSettings.Value.CodeLifetimeMinutes} minutes. If you didn't request this, you can ignore this email.</p>",
             ct);
     }
 

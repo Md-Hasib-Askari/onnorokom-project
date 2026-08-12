@@ -12,7 +12,6 @@ public interface IAuthService
 
     Task<AuthUser> ApproveAsync(Guid userId, bool approve, Guid? studentSectionId = null,
         CancellationToken ct = default);
-    Task<List<UserListItemDto>> GetPendingUsersAsync(CancellationToken ct = default);
 
     Task ForgotPasswordAsync(string email, CancellationToken ct = default);
     Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default);

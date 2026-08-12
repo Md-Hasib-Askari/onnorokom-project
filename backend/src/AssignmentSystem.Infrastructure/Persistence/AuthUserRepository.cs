@@ -29,14 +29,6 @@ public class AuthUserRepository(AppDbContext dbContext) : IUserRepository
         return await dbContext.AuthUsers.AnyAsync(u => u.Email == email, ct);
     }
 
-    public async Task<List<AuthUser>> GetByStatusAsync(AccountStatus status, CancellationToken ct = default)
-    {
-        return await dbContext.AuthUsers
-            .Where(u => u.Status == status)
-            .OrderBy(u => u.CreatedAt)
-            .ToListAsync(ct);
-    }
-
     public async Task<List<AuthUser>> GetAllAsync(CancellationToken ct = default)
     {
         return await dbContext.AuthUsers

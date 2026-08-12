@@ -1,5 +1,7 @@
 using AssignmentSystem.Application.Common.Exceptions;
+using AssignmentSystem.Application.Common;
 using AssignmentSystem.Application.Common.Interfaces;
+using Microsoft.Extensions.Options;
 using AssignmentSystem.Application.DTOs.Auth;
 using AssignmentSystem.Application.DTOs.Settings;
 using AssignmentSystem.Application.Services;
@@ -24,7 +26,8 @@ public class AuthServiceTests
     {
         _sut = new AuthService(
             _repo, _sections, _profiles, _resetCodes, _hasher, _tokens, new FakeTransactionService(),
-            new ProfileProvisioningService(_profiles), _settings, _emailSender);
+            new ProfileProvisioningService(_profiles), _settings, _emailSender,
+            Options.Create(new PasswordResetSettings()));
     }
 
     private Section AddSection(string name = "Section A")
@@ -418,34 +421,6 @@ public class AuthServiceTests
 
         Assert.Equal(AccountStatus.Rejected, result.Status);
         Assert.False(result.IsActive);
-    }
-
-    [Fact]
-    public async Task GetPendingUsers_ReturnsOnlyPending()
-    {
-        _repo.Users.Add(CreateUser(email: "pending1@test.com", status: AccountStatus.Pending));
-        _repo.Users.Add(CreateUser(email: "approved@test.com", status: AccountStatus.Approved));
-        _repo.Users.Add(CreateUser(email: "pending2@test.com", status: AccountStatus.Pending));
-
-        var pending = await _sut.GetPendingUsersAsync();
-
-        Assert.Equal(2, pending.Count);
-        Assert.All(pending, u => Assert.Equal(AccountStatus.Pending, u.Status));
-    }
-
-    [Fact]
-    public async Task GetPendingUsers_IncludesSectionInfoForPendingStudents()
-    {
-        var section = AddSection();
-        var student = CreateUser(email: "pending-student@test.com", status: AccountStatus.Pending);
-        _repo.Users.Add(student);
-        _profiles.StudentProfiles.Add(StudentProfile.Create(student.Id, section.Id));
-
-        var pending = await _sut.GetPendingUsersAsync();
-
-        var dto = Assert.Single(pending);
-        Assert.Equal(section.Id, dto.StudentSectionId);
-        Assert.Equal(section.Name, dto.SectionName);
     }
 
     private static AuthUser CreateUser(string email, AccountStatus status = AccountStatus.Pending, string password = "secret123")

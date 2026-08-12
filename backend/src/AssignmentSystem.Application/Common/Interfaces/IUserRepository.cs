@@ -9,7 +9,6 @@ public interface IUserRepository
     Task<AuthUser?> GetByEmailAsync(string email, CancellationToken ct = default);
     Task<AuthUser?> GetByRefreshTokenAsync(string refreshToken, CancellationToken ct = default);
     Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default);
-    Task<List<AuthUser>> GetByStatusAsync(AccountStatus status, CancellationToken ct = default);
     Task<List<AuthUser>> GetAllAsync(CancellationToken ct = default);
     Task<bool> HasAssignedSubjectsAsync(Guid userId, CancellationToken ct = default);
     Task<bool> HasAssignmentsAsync(Guid userId, CancellationToken ct = default);
