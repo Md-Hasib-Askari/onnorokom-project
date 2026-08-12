@@ -15,7 +15,8 @@ public class AdminUserService(
     IPasswordHasher passwordHasher,
     ITransactionService transactionService,
     ICurrentUser currentUser,
-    IProfileProvisioningService profileProvisioningService) : IAdminUserService
+    IProfileProvisioningService profileProvisioningService,
+    IEmailSender emailSender) : IAdminUserService
 {
     public async Task<List<UserListItemDto>> GetAllUsersAsync(CancellationToken ct = default)
     {
@@ -117,6 +118,22 @@ public class AdminUserService(
             await userRepository.UpdateAsync(user, transactionCt);
             await profileRepository.SoftDeleteForUserAsync(user.Id, transactionCt);
         }, ct);
+    }
+
+    public async Task ResetPasswordAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await userRepository.GetByIdAsync(userId, ct)
+            ?? throw new EntityNotFoundException($"User with id {userId} was not found.");
+
+        var newPassword = RandomPasswordGenerator.Generate();
+        user.SetPassword(passwordHasher.Hash(newPassword), mustChangePassword: true);
+        await userRepository.UpdateAsync(user, ct);
+
+        await emailSender.SendAsync(
+            user.Email,
+            "Your password has been reset",
+            $"<p>Hi {user.FullName},</p><p>An administrator reset your password. Your new temporary password is:</p><p><strong>{newPassword}</strong></p><p>You'll be asked to set a new password the next time you sign in.</p>",
+            ct);
     }
 
     private async Task<bool> IsInUseAsync(AuthUser user, CancellationToken ct)

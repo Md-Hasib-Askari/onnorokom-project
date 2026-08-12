@@ -70,4 +70,11 @@ public class AdminUserController(
         await adminUserService.DeleteUserAsync(id, ct);
         return NoContent();
     }
+
+    [HttpPost("{id}/reset-password")]
+    public async Task<IActionResult> ResetPassword(Guid id, CancellationToken ct)
+    {
+        await adminUserService.ResetPasswordAsync(id, ct);
+        return NoContent();
+    }
 }

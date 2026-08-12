@@ -18,7 +18,7 @@ public class AdminUserServiceTests
 
     public AdminUserServiceTests()
     {
-        _sut = new AdminUserService(_users, _profiles, _sections, _hasher, new FakeTransactionService(), _currentUser, new ProfileProvisioningService(_profiles));
+        _sut = new AdminUserService(_users, _profiles, _sections, _hasher, new FakeTransactionService(), _currentUser, new ProfileProvisioningService(_profiles), new FakeEmailSender());
     }
 
     private Section AddSection(string name = "Section A")
@@ -751,5 +751,16 @@ public class AdminUserServiceTests
     private sealed class FakeCurrentUser : ICurrentUser
     {
         public string? UserId { get; set; }
+    }
+
+    private sealed class FakeEmailSender : IEmailSender
+    {
+        public List<(string ToEmail, string Subject, string HtmlBody)> SentEmails { get; } = new();
+
+        public Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken ct = default)
+        {
+            SentEmails.Add((toEmail, subject, htmlBody));
+            return Task.CompletedTask;
+        }
     }
 }

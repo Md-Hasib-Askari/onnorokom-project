@@ -9,4 +9,5 @@ public interface IAdminUserService
     Task<UserListItemDto> CreateUserAsync(UserCreateRequest request, CancellationToken ct = default);
     Task<UserListItemDto> UpdateUserAsync(Guid userId, UserUpdateRequest request, CancellationToken ct = default);
     Task DeleteUserAsync(Guid userId, CancellationToken ct = default);
+    Task ResetPasswordAsync(Guid userId, CancellationToken ct = default);
 }
