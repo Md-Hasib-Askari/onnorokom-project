@@ -1,8 +1,19 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { loginAction, logoutAction, registerAction } from "@/lib/actions/auth.actions";
-import type { LoginRequest, RegisterRequest } from "@/lib/api/schemas/auth.schema";
+import {
+  forgotPasswordAction,
+  loginAction,
+  logoutAction,
+  registerAction,
+  resetPasswordAction,
+} from "@/lib/actions/auth.actions";
+import type {
+  ForgotPasswordRequest,
+  LoginRequest,
+  RegisterRequest,
+  ResetPasswordRequest,
+} from "@/lib/api/schemas/auth.schema";
 
 /** Grouped under one namespace so every auth mutation is defined in a single place. */
 export const AuthMutations = {
@@ -21,6 +32,18 @@ export const AuthMutations = {
   useLogout() {
     return useMutation({
       mutationFn: () => logoutAction(),
+    });
+  },
+
+  useForgotPassword() {
+    return useMutation({
+      mutationFn: (values: ForgotPasswordRequest) => forgotPasswordAction(values),
+    });
+  },
+
+  useResetPassword() {
+    return useMutation({
+      mutationFn: (values: ResetPasswordRequest) => resetPasswordAction(values),
     });
   },
 };

@@ -3,8 +3,10 @@ import {
   authResponseSchema,
   registerResponseSchema,
   type AuthResponse,
+  type ForgotPasswordRequest,
   type RegisterRequest,
   type RegisterResponse,
+  type ResetPasswordRequest,
 } from "./schemas/auth.schema";
 import { registrationPolicySchema, type RegistrationPolicy } from "./schemas/settings.schema";
 
@@ -33,5 +35,15 @@ export class AuthApi {
   static async getRegistrationPolicy(): Promise<RegistrationPolicy> {
     const { data } = await apiClient.get("/api/auth/registration-policy");
     return registrationPolicySchema.parse(data);
+  }
+
+  /** Silently no-ops server-side when the email doesn't exist, so this never throws for that case. */
+  static async forgotPassword(payload: ForgotPasswordRequest): Promise<void> {
+    await apiClient.post("/api/auth/forgot-password", payload);
+  }
+
+  /** Does not log the user in: the backend issues no tokens for an OTP-based reset. */
+  static async resetPassword(payload: ResetPasswordRequest): Promise<void> {
+    await apiClient.post("/api/auth/reset-password", payload);
   }
 }

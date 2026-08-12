@@ -72,3 +72,27 @@ export const registerResponseSchema = z.object({
   status: accountStatusSchema,
 });
 export type RegisterResponse = z.infer<typeof registerResponseSchema>;
+
+// ---- POST /api/auth/forgot-password ----
+
+export const forgotPasswordRequestSchema = z.object({
+  email: emailSchema,
+});
+export type ForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>;
+
+// ---- POST /api/auth/reset-password ----
+
+export const RESET_CODE_LENGTH = 6;
+
+export const resetCodeSchema = z
+  .string()
+  .trim()
+  .min(1, VALIDATION_MESSAGES.resetCodeRequired)
+  .regex(/^[0-9]{6}$/, VALIDATION_MESSAGES.resetCodeInvalid);
+
+export const resetPasswordRequestSchema = z.object({
+  email: emailSchema,
+  code: resetCodeSchema,
+  newPassword: passwordSchema,
+});
+export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;

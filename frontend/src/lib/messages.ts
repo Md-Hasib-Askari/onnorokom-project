@@ -32,6 +32,8 @@ export const VALIDATION_MESSAGES = {
   newPasswordSameAsCurrent: "New password must be different from your current password.",
   confirmPasswordRequired: "Confirm your password.",
   passwordsDoNotMatch: "Passwords do not match.",
+  resetCodeRequired: "Enter the code from your email.",
+  resetCodeInvalid: "Enter the 6-digit code from your email.",
   gradeRequired: "Grade is required for students.",
   sectionRequired: "Section is required for students.",
   subjectGradeRequired: "Grade is required.",

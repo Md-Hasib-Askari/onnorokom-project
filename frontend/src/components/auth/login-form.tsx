@@ -81,7 +81,15 @@ export function LoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Password</FormLabel>
+                    <Link
+                      href={ROUTES.forgotPassword}
+                      className="text-sm text-muted-foreground underline underline-offset-4"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
                   <FormControl>
                     <Input type="password" autoComplete="current-password" {...field} />
                   </FormControl>
