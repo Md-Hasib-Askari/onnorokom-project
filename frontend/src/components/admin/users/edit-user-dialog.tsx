@@ -75,7 +75,7 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
       status: AccountStatus.Approved,
       isActive: true,
       studentSectionId: undefined,
-      teacherProfile: { teacherCode: undefined },
+      teacherProfile: { teacherCode: "" },
     },
   });
 
@@ -87,7 +87,7 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
       status: user.status === AccountStatus.Rejected ? AccountStatus.Rejected : AccountStatus.Approved,
       isActive: user.isActive,
       studentSectionId: user.studentSectionId ?? undefined,
-      teacherProfile: { teacherCode: user.teacherCode ?? undefined },
+      teacherProfile: { teacherCode: user.teacherCode ?? "" },
     });
   }, [user, form]);
 
