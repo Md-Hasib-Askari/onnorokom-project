@@ -28,6 +28,8 @@ export const VALIDATION_MESSAGES = {
   emailRequired: "Email is required.",
   emailInvalid: "Enter a valid email address.",
   passwordRequired: "Password is required.",
+  currentPasswordRequired: "Enter your current password.",
+  newPasswordSameAsCurrent: "New password must be different from your current password.",
   confirmPasswordRequired: "Confirm your password.",
   passwordsDoNotMatch: "Passwords do not match.",
   gradeRequired: "Grade is required for students.",

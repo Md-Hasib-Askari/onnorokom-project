@@ -10,6 +10,7 @@ export const ROUTES = {
   register: "/register",
   pendingApproval: "/pending-approval",
   dashboard: "/dashboard",
+  profile: "/profile",
   admin: "/admin",
   adminUsers: "/admin/users",
   adminGrades: "/admin/grades",
