@@ -11,6 +11,7 @@ public class AuthUser : BaseEntity
     public UserRole Role { get; private init; }
     public AccountStatus Status { get; private set; } = AccountStatus.Pending;
     public bool IsActive { get; private set; } = true;
+    public bool MustChangePassword { get; private set; }
     public string? RefreshToken { get; private set; }
     public DateTimeOffset? RefreshTokenExpiresAt { get; private set; }
     public string? PreviousRefreshToken { get; private set; }
@@ -76,6 +77,18 @@ public class AuthUser : BaseEntity
     {
         FullName = fullName.Trim();
         Email = email.Trim().ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Sets a new password hash and revokes the current refresh token so any other active
+    /// session must re-authenticate. <paramref name="mustChangePassword"/> is true for
+    /// admin-generated passwords, forcing the recipient to pick their own before continuing.
+    /// </summary>
+    public void SetPassword(string passwordHash, bool mustChangePassword = false)
+    {
+        PasswordHash = passwordHash;
+        MustChangePassword = mustChangePassword;
+        RevokeRefreshToken();
     }
 
     public void SetRefreshToken(string refreshToken, DateTimeOffset expiresAt, DateTimeOffset graceExpiresAt)

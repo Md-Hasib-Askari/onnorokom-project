@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
     public DbSet<Assignment> Assignments => Set<Assignment>();
     public DbSet<Submission> Submissions => Set<Submission>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<PasswordResetCode> PasswordResetCodes => Set<PasswordResetCode>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,6 +35,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
         modelBuilder.ApplyConfiguration(new AssignmentConfiguration());
         modelBuilder.ApplyConfiguration(new SubmissionConfiguration());
         modelBuilder.ApplyConfiguration(new SystemSettingConfiguration());
+        modelBuilder.ApplyConfiguration(new PasswordResetCodeConfiguration());
 
         ApplySoftDeleteQueryFilters(modelBuilder);
     }

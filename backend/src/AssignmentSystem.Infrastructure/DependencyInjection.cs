@@ -1,4 +1,5 @@
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Infrastructure.Email;
 using AssignmentSystem.Infrastructure.Persistence;
 using AssignmentSystem.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +11,8 @@ namespace AssignmentSystem.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services, IConfiguration configuration, bool isDevelopment)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
@@ -27,13 +29,23 @@ public static class DependencyInjection
         services.AddScoped<IAssignmentRepository, AssignmentRepository>();
         services.AddScoped<ISubmissionRepository, SubmissionRepository>();
         services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
+        services.AddScoped<IPasswordResetCodeRepository, PasswordResetCodeRepository>();
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<ITokenService, TokenService>();
+        if (isDevelopment)
+        {
+            services.AddScoped<IEmailSender, LoggingEmailSender>();
+        }
+        else
+        {
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
+        }
         services.AddScoped<DbInitializer>();
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.Configure<BCryptSettings>(configuration.GetSection(BCryptSettings.SectionName));
+        services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
 
         return services;
     }

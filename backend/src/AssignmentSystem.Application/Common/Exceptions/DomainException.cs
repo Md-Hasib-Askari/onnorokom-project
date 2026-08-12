@@ -37,6 +37,24 @@ public class InvalidRefreshTokenException : DomainException
         : base("Refresh token is invalid or has expired.") { }
 }
 
+public class InvalidCurrentPasswordException : DomainException
+{
+    public InvalidCurrentPasswordException()
+        : base("Current password is incorrect.") { }
+}
+
+public class InvalidOrExpiredResetCodeException : DomainException
+{
+    public InvalidOrExpiredResetCodeException()
+        : base("The code is invalid or has expired.") { }
+}
+
+public class PasswordResetRateLimitedException : DomainException
+{
+    public PasswordResetRateLimitedException()
+        : base("A code was already sent recently. Please wait before requesting another.") { }
+}
+
 /// <summary>
 /// Raised when an admin has switched off self-registration for the requested role. Distinct from a
 /// validation failure: the payload is well formed, the system is simply closed to it right now.
