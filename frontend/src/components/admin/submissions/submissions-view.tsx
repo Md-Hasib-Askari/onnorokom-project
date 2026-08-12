@@ -3,6 +3,8 @@
 import { AdminAssignmentQueries } from "@/lib/queries/admin-assignments.queries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/workspace/data-table";
+import { ErrorState } from "@/components/workspace/error-state";
+import { LoadMoreButton } from "@/components/workspace/load-more-button";
 import { buildSubmissionColumns } from "./submission-columns";
 
 /** Placeholder rows shown while the table loads. */
@@ -11,6 +13,7 @@ const SKELETON_ROW_COUNT = 5;
 export function SubmissionsView() {
   const query = AdminAssignmentQueries.useSubmissions();
   const columns = buildSubmissionColumns();
+  const submissions = query.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <div className="space-y-6">
@@ -25,13 +28,22 @@ export function SubmissionsView() {
       {query.isLoading ? (
         <TableSkeleton />
       ) : query.isError ? (
-        <p className="text-sm text-destructive">Failed to load submissions.</p>
+        <ErrorState description="Failed to load submissions." retry={query.refetch} />
       ) : (
-        <DataTable
-          columns={columns}
-          data={query.data ?? []}
-          emptyMessage="No submissions yet."
-        />
+        <>
+          <DataTable
+            columns={columns}
+            data={submissions}
+            emptyMessage="No submissions yet."
+          />
+          {query.hasNextPage && (
+            <LoadMoreButton
+              onClick={() => query.fetchNextPage()}
+              isLoading={query.isFetchingNextPage}
+              label="Load more submissions"
+            />
+          )}
+        </>
       )}
     </div>
   );

@@ -1,7 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { AdminAssignmentsApi } from "@/lib/api/admin-assignments.api";
+import {
+  AdminAssignmentsApi,
+  type AdminAssignmentListParams,
+} from "@/lib/api/admin-assignments.api";
 import { ApiError } from "@/lib/api/client";
 import { HttpStatus } from "@/lib/api/http-status";
 import { UserRole } from "@/lib/api/schemas/common.schema";
@@ -23,21 +26,21 @@ function redirectOnSessionExpired(error: unknown): never {
   throw error;
 }
 
-export async function listAssignmentsAction() {
+export async function listAssignmentsAction(params: AdminAssignmentListParams = {}) {
   await requireRole(UserRole.Admin);
   try {
     const token = await accessTokenOrThrow();
-    return await AdminAssignmentsApi.list(token);
+    return await AdminAssignmentsApi.list(token, params);
   } catch (error) {
     redirectOnSessionExpired(error);
   }
 }
 
-export async function listSubmissionsAction() {
+export async function listSubmissionsAction(params: AdminAssignmentListParams = {}) {
   await requireRole(UserRole.Admin);
   try {
     const token = await accessTokenOrThrow();
-    return await AdminAssignmentsApi.listSubmissions(token);
+    return await AdminAssignmentsApi.listSubmissions(token, params);
   } catch (error) {
     redirectOnSessionExpired(error);
   }

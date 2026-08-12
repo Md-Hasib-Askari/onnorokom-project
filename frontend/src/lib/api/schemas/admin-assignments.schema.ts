@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cursorPageSchema } from "./common.schema";
 
 // ---- GET /api/admin/assignments ----
 
@@ -25,7 +26,7 @@ export const assignmentListItemSchema = z.object({
 });
 export type AssignmentListItem = z.infer<typeof assignmentListItemSchema>;
 
-export const adminAssignmentListResponseSchema = z.array(assignmentListItemSchema);
+export const adminAssignmentListResponseSchema = cursorPageSchema(assignmentListItemSchema);
 
 // ---- GET /api/admin/submissions ----
 
@@ -53,4 +54,4 @@ export const submissionListItemSchema = z.object({
 });
 export type SubmissionListItem = z.infer<typeof submissionListItemSchema>;
 
-export const adminSubmissionListResponseSchema = z.array(submissionListItemSchema);
+export const adminSubmissionListResponseSchema = cursorPageSchema(submissionListItemSchema);

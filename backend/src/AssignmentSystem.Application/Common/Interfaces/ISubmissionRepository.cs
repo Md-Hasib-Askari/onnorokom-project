@@ -1,3 +1,4 @@
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Assignments;
 using AssignmentSystem.Domain.Entities;
 
@@ -5,9 +6,15 @@ namespace AssignmentSystem.Application.Common.Interfaces;
 
 public interface ISubmissionRepository
 {
-    Task<List<Submission>> GetAllAsync(CancellationToken ct = default);
+    /// <summary>Keyset page ordered by <c>(SubmittedAt, Id)</c> descending (newest first).</summary>
+    Task<PagedResult<Submission>> GetPageAsync(
+        int limit,
+        DateTimeOffset? afterSubmittedAt,
+        Guid? afterId,
+        CancellationToken ct = default);
     Task<Submission?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<List<Submission>> GetByAssignmentAsync(Guid assignmentId, CancellationToken ct = default);
+
     Task<Submission?> GetByAssignmentAndStudentAsync(Guid assignmentId, Guid studentId, CancellationToken ct = default);
 
     /// <summary>

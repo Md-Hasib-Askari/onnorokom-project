@@ -1,4 +1,5 @@
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -7,11 +8,17 @@ namespace AssignmentSystem.Infrastructure.Persistence;
 
 public class AssignmentRepository(AppDbContext dbContext) : IAssignmentRepository
 {
-    public async Task<List<Assignment>> GetAllAsync(CancellationToken ct = default)
+    public async Task<PagedResult<Assignment>> GetPageAsync(
+        int limit,
+        DateTimeOffset? afterCreatedAt,
+        Guid? afterId,
+        CancellationToken ct = default)
     {
-        return await WithDetails()
-            .OrderByDescending(a => a.CreatedAt)
+        var rows = await WithDetails()
+            .ApplyKeysetPaging(a => a.CreatedAt, afterCreatedAt, afterId, descending: true, limit)
             .ToListAsync(ct);
+
+        return PagedResult<Assignment>.FromRows(rows, limit, last => CursorCodec.Encode(last.CreatedAt, last.Id));
     }
 
     public async Task<Assignment?> GetByIdAsync(Guid id, CancellationToken ct = default)

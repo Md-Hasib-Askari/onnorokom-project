@@ -28,3 +28,21 @@ export const emailSchema = z
   .toLowerCase()
   .min(1, VALIDATION_MESSAGES.emailRequired)
   .pipe(z.email(VALIDATION_MESSAGES.emailInvalid));
+
+/**
+ * Envelope every list endpoint returns once cursor pagination lands: a page of items plus the
+ * opaque token to pass as `?cursor=` for the next page. `nextCursor` is null when `hasMore` is
+ * false (the backend never emits a cursor for a page it cannot extend).
+ */
+export function cursorPageSchema<T extends z.ZodType>(itemSchema: T) {
+  return z.object({
+    items: z.array(itemSchema),
+    nextCursor: z.string().nullable(),
+    hasMore: z.boolean(),
+  });
+}
+export type CursorPage<T> = {
+  items: T[];
+  nextCursor: string | null;
+  hasMore: boolean;
+};

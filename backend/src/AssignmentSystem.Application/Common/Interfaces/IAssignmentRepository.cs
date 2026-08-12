@@ -1,10 +1,16 @@
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Domain.Entities;
 
 namespace AssignmentSystem.Application.Common.Interfaces;
 
 public interface IAssignmentRepository
 {
-    Task<List<Assignment>> GetAllAsync(CancellationToken ct = default);
+    /// <summary>Keyset page ordered by <c>(CreatedAt, Id)</c> descending (newest first).</summary>
+    Task<PagedResult<Assignment>> GetPageAsync(
+        int limit,
+        DateTimeOffset? afterCreatedAt,
+        Guid? afterId,
+        CancellationToken ct = default);
     Task<Assignment?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<List<Assignment>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default);
 

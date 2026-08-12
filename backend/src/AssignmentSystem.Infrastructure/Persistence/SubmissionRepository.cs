@@ -1,4 +1,5 @@
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Assignments;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
@@ -8,15 +9,21 @@ namespace AssignmentSystem.Infrastructure.Persistence;
 
 public class SubmissionRepository(AppDbContext dbContext) : ISubmissionRepository
 {
-    public async Task<List<Submission>> GetAllAsync(CancellationToken ct = default)
+    public async Task<PagedResult<Submission>> GetPageAsync(
+        int limit,
+        DateTimeOffset? afterSubmittedAt,
+        Guid? afterId,
+        CancellationToken ct = default)
     {
-        return await dbContext.Submissions
+        var rows = await dbContext.Submissions
             .Include(s => s.Assignment)
             .ThenInclude(a => a!.Subject)
             .ThenInclude(sub => sub!.Grade)
             .Include(s => s.Student)
-            .OrderByDescending(s => s.SubmittedAt)
+            .ApplyKeysetPaging(s => s.SubmittedAt, afterSubmittedAt, afterId, descending: true, limit)
             .ToListAsync(ct);
+
+        return PagedResult<Submission>.FromRows(rows, limit, last => CursorCodec.Encode(last.SubmittedAt, last.Id));
     }
 
     public async Task<Submission?> GetByIdAsync(Guid id, CancellationToken ct = default)
@@ -30,9 +37,7 @@ public class SubmissionRepository(AppDbContext dbContext) : ISubmissionRepositor
     public async Task<List<Submission>> GetByAssignmentAsync(Guid assignmentId, CancellationToken ct = default)
     {
         return await dbContext.Submissions
-            .Include(s => s.Student)
             .Where(s => s.AssignmentId == assignmentId)
-            .OrderBy(s => s.Student!.FullName)
             .ToListAsync(ct);
     }
 

@@ -47,7 +47,7 @@ export function buildAssignmentColumns(): ColumnDef<AssignmentListItem>[] {
     },
     {
       accessorKey: "maxMarks",
-      header: "Max marks",
+      header: "Total marks",
     },
     {
       accessorKey: "submissionCount",

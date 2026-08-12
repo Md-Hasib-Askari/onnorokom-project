@@ -1,5 +1,6 @@
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Assignments;
 using AssignmentSystem.Application.DTOs.Student;
 using AssignmentSystem.Application.Services;
@@ -252,6 +253,13 @@ public class StudentAssignmentServiceTests
 
     private sealed class FakeAssignmentRepository : IAssignmentRepository
     {
+        public Task<PagedResult<Assignment>> GetPageAsync(
+            int limit,
+            DateTimeOffset? afterCreatedAt,
+            Guid? afterId,
+            CancellationToken ct = default)
+            => Task.FromResult(PagedResult<Assignment>.FromAll([]));
+
         public List<Assignment> Items { get; } = [];
 
         public Task<List<Assignment>> GetAllAsync(CancellationToken ct = default)
@@ -289,6 +297,13 @@ public class StudentAssignmentServiceTests
 
     private sealed class FakeSubmissionRepository : ISubmissionRepository
     {
+        public Task<PagedResult<Submission>> GetPageAsync(
+            int limit,
+            DateTimeOffset? afterSubmittedAt,
+            Guid? afterId,
+            CancellationToken ct = default)
+            => Task.FromResult(PagedResult<Submission>.FromAll([]));
+
         public List<Submission> Items { get; } = [];
 
         public Task<List<Submission>> GetAllAsync(CancellationToken ct = default)

@@ -3,6 +3,8 @@
 import { AdminAssignmentQueries } from "@/lib/queries/admin-assignments.queries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/workspace/data-table";
+import { ErrorState } from "@/components/workspace/error-state";
+import { LoadMoreButton } from "@/components/workspace/load-more-button";
 import { buildAssignmentColumns } from "./assignment-columns";
 
 /** Placeholder rows shown while the table loads. */
@@ -11,6 +13,7 @@ const SKELETON_ROW_COUNT = 5;
 export function AssignmentsView() {
   const query = AdminAssignmentQueries.useList();
   const columns = buildAssignmentColumns();
+  const assignments = query.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <div className="space-y-6">
@@ -25,13 +28,22 @@ export function AssignmentsView() {
       {query.isLoading ? (
         <TableSkeleton />
       ) : query.isError ? (
-        <p className="text-sm text-destructive">Failed to load assignments.</p>
+        <ErrorState description="Failed to load assignments." retry={query.refetch} />
       ) : (
-        <DataTable
-          columns={columns}
-          data={query.data ?? []}
-          emptyMessage="No assignments yet."
-        />
+        <>
+          <DataTable
+            columns={columns}
+            data={assignments}
+            emptyMessage="No assignments yet."
+          />
+          {query.hasNextPage && (
+            <LoadMoreButton
+              onClick={() => query.fetchNextPage()}
+              isLoading={query.isFetchingNextPage}
+              label="Load more assignments"
+            />
+          )}
+        </>
       )}
     </div>
   );
