@@ -62,4 +62,11 @@ export class AdminUsersApi {
       headers: authHeaders(accessToken),
     });
   }
+
+  /** Generates a random password and emails it to the user; nothing is returned to the admin. */
+  static async resetPassword(accessToken: string, id: string): Promise<void> {
+    await apiClient.post(`/api/admin/users/${id}/reset-password`, undefined, {
+      headers: authHeaders(accessToken),
+    });
+  }
 }

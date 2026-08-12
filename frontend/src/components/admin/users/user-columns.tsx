@@ -25,6 +25,7 @@ export function buildUserColumns(options: {
   onEdit: (user: AdminUserSummary) => void;
   onDelete: (user: AdminUserSummary) => void;
   onApprove: (user: AdminUserSummary, approve: boolean) => void;
+  onResetPassword: (user: AdminUserSummary) => void;
   currentUserId: string;
 }): ColumnDef<AdminUserSummary>[] {
   return [
@@ -89,6 +90,11 @@ export function buildUserColumns(options: {
                 </>
               ) : (
                 <DropdownMenuItem onClick={() => options.onEdit(user)}>Edit</DropdownMenuItem>
+              )}
+              {user.status === AccountStatus.Approved && (
+                <DropdownMenuItem onClick={() => options.onResetPassword(user)}>
+                  Reset password
+                </DropdownMenuItem>
               )}
               {user.id !== options.currentUserId && (
                 <DropdownMenuItem onClick={() => options.onDelete(user)} variant="destructive">

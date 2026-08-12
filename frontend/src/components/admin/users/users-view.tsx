@@ -19,6 +19,7 @@ import { ApproveStudentDialog } from "./approve-student-dialog";
 import { CreateUserDialog } from "./create-user-dialog";
 import { EditUserDialog } from "./edit-user-dialog";
 import { DeleteUserDialog } from "./delete-user-dialog";
+import { ResetPasswordDialog } from "./reset-password-dialog";
 
 /** Tab identifiers for the users screen. */
 const USER_TAB = {
@@ -39,10 +40,12 @@ export function UsersView({ currentUserId }: UsersViewProps) {
   const pendingQuery = AdminUserQueries.usePending();
   const approveMutation = AdminUserMutations.useApprove();
   const deleteMutation = AdminUserMutations.useDelete();
+  const resetPasswordMutation = AdminUserMutations.useResetPassword();
 
   const [editingUser, setEditingUser] = useState<AdminUserSummary | null>(null);
   const [deletingUser, setDeletingUser] = useState<AdminUserSummary | null>(null);
   const [approvingStudent, setApprovingStudent] = useState<AdminUserSummary | null>(null);
+  const [resettingUser, setResettingUser] = useState<AdminUserSummary | null>(null);
 
   function handleApprove(user: AdminUserSummary, approve: boolean) {
     // A self-registered student has no section yet, so approving one is also an enrolment decision.
@@ -70,6 +73,7 @@ export function UsersView({ currentUserId }: UsersViewProps) {
     onEdit: setEditingUser,
     onDelete: setDeletingUser,
     onApprove: handleApprove,
+    onResetPassword: setResettingUser,
     currentUserId,
   });
 
@@ -160,6 +164,11 @@ export function UsersView({ currentUserId }: UsersViewProps) {
         user={deletingUser}
         onOpenChange={(open) => !open && setDeletingUser(null)}
         mutation={deleteMutation}
+      />
+      <ResetPasswordDialog
+        user={resettingUser}
+        onOpenChange={(open) => !open && setResettingUser(null)}
+        mutation={resetPasswordMutation}
       />
     </div>
   );

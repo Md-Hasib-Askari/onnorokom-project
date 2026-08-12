@@ -5,6 +5,7 @@ import {
   approveUserAction,
   createUserAction,
   deleteUserAction,
+  resetUserPasswordAction,
   updateUserAction,
 } from "@/lib/actions/admin-users.actions";
 import type {
@@ -70,6 +71,12 @@ export const AdminUserMutations = {
           queryClient.invalidateQueries({ queryKey: adminUsersKeys.all });
         }
       },
+    });
+  },
+
+  useResetPassword() {
+    return useMutation({
+      mutationFn: (id: string) => resetUserPasswordAction(id),
     });
   },
 };

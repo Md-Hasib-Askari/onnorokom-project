@@ -132,3 +132,15 @@ export async function deleteUserAction(id: string): Promise<ActionResult> {
   revalidatePath(ROUTES.adminUsers);
   return { success: true };
 }
+
+export async function resetUserPasswordAction(id: string): Promise<ActionResult> {
+  await requireRole(UserRole.Admin);
+  try {
+    const token = await accessTokenOrThrow();
+    await AdminUsersApi.resetPassword(token, id);
+  } catch (error) {
+    if (error instanceof ApiError) return { success: false, error: error.message };
+    return { success: false, error: ERROR_MESSAGES.genericRetry };
+  }
+  return { success: true };
+}
