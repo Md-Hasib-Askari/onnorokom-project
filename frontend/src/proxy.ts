@@ -28,8 +28,15 @@ const PROTECTED_PREFIXES: readonly string[] = [
   ROUTES.teacher,
   ROUTES.student,
   ROUTES.dashboard,
+  ROUTES.profile,
+  ROUTES.changePassword,
 ];
-const GUEST_ONLY_PATHS: readonly string[] = [ROUTES.login, ROUTES.register];
+const GUEST_ONLY_PATHS: readonly string[] = [
+  ROUTES.login,
+  ROUTES.register,
+  ROUTES.forgotPassword,
+  ROUTES.resetPassword,
+];
 
 function isExpiringSoon(iso: string): boolean {
   const expiresAt = new Date(iso).getTime();
@@ -107,6 +114,7 @@ export async function proxy(request: NextRequest) {
           email: auth.email,
           role: auth.role,
           accessTokenExpiresAt: auth.accessTokenExpiresAt,
+          mustChangePassword: auth.mustChangePassword,
         };
         refreshed = { session: nextSession, accessToken: auth.accessToken, refreshToken: auth.refreshToken };
         session = nextSession;
@@ -132,6 +140,9 @@ export async function proxy(request: NextRequest) {
     const requiredRole = requiredRoleFor(pathname);
     if (requiredRole && session.role !== requiredRole) {
       return finalizeAuthCookies(NextResponse.redirect(new URL(roleHome(session.role), request.url)), refreshed, sessionInvalidated);
+    }
+    if (session.mustChangePassword && pathname !== ROUTES.changePassword) {
+      return finalizeAuthCookies(NextResponse.redirect(new URL(ROUTES.changePassword, request.url)), refreshed, sessionInvalidated);
     }
   }
 
@@ -166,7 +177,11 @@ export const config = {
     "/teacher/:path*",
     "/student/:path*",
     "/dashboard/:path*",
+    "/profile/:path*",
+    "/change-password",
     "/login",
     "/register",
+    "/forgot-password",
+    "/reset-password",
   ],
 };

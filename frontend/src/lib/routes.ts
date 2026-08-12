@@ -10,6 +10,7 @@ export const ROUTES = {
   register: "/register",
   forgotPassword: "/forgot-password",
   resetPassword: "/reset-password",
+  changePassword: "/change-password",
   pendingApproval: "/pending-approval",
   dashboard: "/dashboard",
   profile: "/profile",

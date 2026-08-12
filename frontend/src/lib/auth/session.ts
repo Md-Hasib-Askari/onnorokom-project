@@ -35,6 +35,7 @@ function toSessionUser(auth: AuthResponse): SessionUser {
     email: auth.email,
     role: auth.role,
     accessTokenExpiresAt: auth.accessTokenExpiresAt,
+    mustChangePassword: auth.mustChangePassword,
   };
 }
 

@@ -25,6 +25,7 @@ export const authResponseSchema = z.object({
   email: z.string(),
   role: userRoleSchema,
   status: accountStatusSchema,
+  mustChangePassword: z.boolean(),
 });
 export type AuthResponse = z.infer<typeof authResponseSchema>;
 

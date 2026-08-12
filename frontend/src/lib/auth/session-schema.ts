@@ -9,6 +9,7 @@ export const sessionUserSchema = z.object({
   email: z.string(),
   role: userRoleSchema,
   accessTokenExpiresAt: z.string(),
+  mustChangePassword: z.boolean(),
 });
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 
