@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { VALIDATION_MESSAGES } from "@/lib/messages";
+import { cursorPageSchema } from "./common.schema";
 import { assignmentStatusSchema, submissionStatusSchema } from "./admin-assignments.schema";
 
 export const ASSIGNMENT_TITLE_MAX_LENGTH = 200;
@@ -19,7 +20,21 @@ export const teacherSectionSubjectSchema = z.object({
 });
 export type TeacherSectionSubject = z.infer<typeof teacherSectionSubjectSchema>;
 
-export const teacherSectionSubjectListSchema = z.array(teacherSectionSubjectSchema);
+export const teacherSectionSubjectListSchema = cursorPageSchema(teacherSectionSubjectSchema);
+
+// ---- GET /api/teacher/students ----
+
+export const teacherStudentSchema = z.object({
+  id: z.string(),
+  fullName: z.string(),
+  rollNumber: z.string().nullable(),
+  sectionId: z.string(),
+  sectionName: z.string().nullable(),
+  gradeName: z.string().nullable(),
+});
+export type TeacherStudent = z.infer<typeof teacherStudentSchema>;
+
+export const teacherStudentListSchema = cursorPageSchema(teacherStudentSchema);
 
 // ---- GET /api/teacher/assignments ----
 
@@ -36,12 +51,13 @@ export const teacherAssignmentSchema = z.object({
   maxMarks: z.number(),
   status: assignmentStatusSchema,
   allowLateSubmission: z.boolean(),
+  submissionsOpen: z.boolean(),
   submissionCount: z.number(),
   gradedCount: z.number(),
 });
 export type TeacherAssignment = z.infer<typeof teacherAssignmentSchema>;
 
-export const teacherAssignmentListSchema = z.array(teacherAssignmentSchema);
+export const teacherAssignmentListSchema = cursorPageSchema(teacherAssignmentSchema);
 
 // ---- GET /api/teacher/assignments/:id/submissions ----
 
@@ -61,7 +77,7 @@ export const teacherSubmissionSchema = z.object({
 });
 export type TeacherSubmission = z.infer<typeof teacherSubmissionSchema>;
 
-export const teacherSubmissionListSchema = z.array(teacherSubmissionSchema);
+export const teacherSubmissionListSchema = cursorPageSchema(teacherSubmissionSchema);
 
 // ---- POST/PUT /api/teacher/assignments ----
 // `deadline` is an ISO instant here. The form works in the browser's local time and converts

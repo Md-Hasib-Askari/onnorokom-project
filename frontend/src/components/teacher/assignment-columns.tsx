@@ -27,6 +27,9 @@ const statusVariant: Record<TeacherAssignment["status"], "default" | "secondary"
 export function buildAssignmentColumns(options: {
   onEdit: (assignment: TeacherAssignment) => void;
   onPublish: (assignment: TeacherAssignment) => void;
+  onUnpublish: (assignment: TeacherAssignment) => void;
+  onCloseSubmissions: (assignment: TeacherAssignment) => void;
+  onReopenSubmissions: (assignment: TeacherAssignment) => void;
   onDelete: (assignment: TeacherAssignment) => void;
 }): ColumnDef<TeacherAssignment>[] {
   return [
@@ -95,7 +98,20 @@ export function buildAssignmentColumns(options: {
                 <DropdownMenuItem onClick={() => options.onPublish(assignment)}>
                   Publish
                 </DropdownMenuItem>
-              ) : null}
+              ) : (
+                <DropdownMenuItem onClick={() => options.onUnpublish(assignment)}>
+                  Unpublish
+                </DropdownMenuItem>
+              )}
+              {assignment.submissionsOpen ? (
+                <DropdownMenuItem onClick={() => options.onCloseSubmissions(assignment)}>
+                  Close submissions
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => options.onReopenSubmissions(assignment)}>
+                  Reopen submissions
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => options.onDelete(assignment)} variant="destructive">
                 Delete
               </DropdownMenuItem>

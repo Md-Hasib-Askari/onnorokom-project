@@ -90,7 +90,7 @@ export function EditAssignmentDialog({ assignment, onOpenChange }: EditAssignmen
 
   return (
     <Dialog open={!!assignment} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit assignment</DialogTitle>
           <DialogDescription>
@@ -146,7 +146,7 @@ export function EditAssignmentDialog({ assignment, onOpenChange }: EditAssignmen
                 name="maxMarks"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Max marks</FormLabel>
+                    <FormLabel>Total marks</FormLabel>
                     <FormControl>
                       <Input
                         type="number"

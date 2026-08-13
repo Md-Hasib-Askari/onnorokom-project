@@ -1,16 +1,18 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
   getAssignmentAction,
   listAssignmentsAction,
   listSectionSubjectsAction,
+  listStudentsAction,
   listSubmissionsAction,
 } from "@/lib/actions/teacher.actions";
 
 export const teacherKeys = {
   all: ["teacher"] as const,
   sectionSubjects: () => [...teacherKeys.all, "section-subjects"] as const,
+  students: () => [...teacherKeys.all, "students"] as const,
   assignments: () => [...teacherKeys.all, "assignments"] as const,
   assignmentList: () => [...teacherKeys.assignments(), "list"] as const,
   assignment: (id: string) => [...teacherKeys.assignments(), id] as const,
@@ -26,10 +28,23 @@ export const TeacherQueries = {
     });
   },
 
+  useStudents() {
+    return useInfiniteQuery({
+      queryKey: teacherKeys.students(),
+      queryFn: ({ pageParam }) =>
+        listStudentsAction(pageParam ? { cursor: pageParam } : {}),
+      initialPageParam: undefined as string | undefined,
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    });
+  },
+
   useAssignments() {
-    return useQuery({
+    return useInfiniteQuery({
       queryKey: teacherKeys.assignmentList(),
-      queryFn: () => listAssignmentsAction(),
+      queryFn: ({ pageParam }) =>
+        listAssignmentsAction(pageParam ? { cursor: pageParam } : {}),
+      initialPageParam: undefined as string | undefined,
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     });
   },
 
@@ -41,9 +56,12 @@ export const TeacherQueries = {
   },
 
   useSubmissions(assignmentId: string) {
-    return useQuery({
+    return useInfiniteQuery({
       queryKey: teacherKeys.submissions(assignmentId),
-      queryFn: () => listSubmissionsAction(assignmentId),
+      queryFn: ({ pageParam }) =>
+        listSubmissionsAction(assignmentId, pageParam ? { cursor: pageParam } : {}),
+      initialPageParam: undefined as string | undefined,
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     });
   },
 };

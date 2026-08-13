@@ -144,7 +144,7 @@ export function CreateAssignmentDialog({
           New assignment
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Create assignment</DialogTitle>
           <DialogDescription>
@@ -257,7 +257,7 @@ export function CreateAssignmentDialog({
                 name="maxMarks"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Max marks</FormLabel>
+                    <FormLabel>Total marks</FormLabel>
                     <FormControl>
                       <Input
                         type="number"

@@ -1,8 +1,10 @@
 import { apiClient, authHeaders } from "./client";
+import type { CursorPage } from "./schemas/common.schema";
 import {
   teacherAssignmentListSchema,
   teacherAssignmentSchema,
   teacherSectionSubjectListSchema,
+  teacherStudentListSchema,
   teacherSubmissionListSchema,
   teacherSubmissionSchema,
   type AssignmentCreateRequest,
@@ -10,12 +12,14 @@ import {
   type GradeSubmissionRequest,
   type TeacherAssignment,
   type TeacherSectionSubject,
+  type TeacherStudent,
   type TeacherSubmission,
 } from "./schemas/teacher.schema";
 
 const ASSIGNMENTS_PATH = "/api/teacher/assignments";
 const SUBMISSIONS_PATH = "/api/teacher/submissions";
 const SECTION_SUBJECTS_PATH = "/api/teacher/section-subjects";
+const STUDENTS_PATH = "/api/teacher/students";
 
 /** `/api/teacher/*`, requires a Teacher access token. Every route is scoped to the caller. */
 export class TeacherApi {
@@ -23,12 +27,27 @@ export class TeacherApi {
     const { data } = await apiClient.get(SECTION_SUBJECTS_PATH, {
       headers: authHeaders(accessToken),
     });
-    return teacherSectionSubjectListSchema.parse(data);
+    return teacherSectionSubjectListSchema.parse(data).items;
   }
 
-  static async listAssignments(accessToken: string): Promise<TeacherAssignment[]> {
+  static async listStudents(
+    accessToken: string,
+    params: { limit?: number; cursor?: string } = {}
+  ): Promise<CursorPage<TeacherStudent>> {
+    const { data } = await apiClient.get(STUDENTS_PATH, {
+      headers: authHeaders(accessToken),
+      params,
+    });
+    return teacherStudentListSchema.parse(data);
+  }
+
+  static async listAssignments(
+    accessToken: string,
+    params: { limit?: number; cursor?: string } = {}
+  ): Promise<CursorPage<TeacherAssignment>> {
     const { data } = await apiClient.get(ASSIGNMENTS_PATH, {
       headers: authHeaders(accessToken),
+      params,
     });
     return teacherAssignmentListSchema.parse(data);
   }
@@ -68,15 +87,41 @@ export class TeacherApi {
     return teacherAssignmentSchema.parse(data);
   }
 
+  static async unpublishAssignment(accessToken: string, id: string): Promise<TeacherAssignment> {
+    const { data } = await apiClient.post(`${ASSIGNMENTS_PATH}/${id}/unpublish`, null, {
+      headers: authHeaders(accessToken),
+    });
+    return teacherAssignmentSchema.parse(data);
+  }
+
+  static async closeSubmissions(accessToken: string, id: string): Promise<TeacherAssignment> {
+    const { data } = await apiClient.post(`${ASSIGNMENTS_PATH}/${id}/close-submissions`, null, {
+      headers: authHeaders(accessToken),
+    });
+    return teacherAssignmentSchema.parse(data);
+  }
+
+  static async reopenSubmissions(accessToken: string, id: string): Promise<TeacherAssignment> {
+    const { data } = await apiClient.post(`${ASSIGNMENTS_PATH}/${id}/reopen-submissions`, null, {
+      headers: authHeaders(accessToken),
+    });
+    return teacherAssignmentSchema.parse(data);
+  }
+
   static async deleteAssignment(accessToken: string, id: string): Promise<void> {
     await apiClient.delete(`${ASSIGNMENTS_PATH}/${id}`, {
       headers: authHeaders(accessToken),
     });
   }
 
-  static async listSubmissions(accessToken: string, assignmentId: string): Promise<TeacherSubmission[]> {
+  static async listSubmissions(
+    accessToken: string,
+    assignmentId: string,
+    params: { limit?: number; cursor?: string } = {}
+  ): Promise<CursorPage<TeacherSubmission>> {
     const { data } = await apiClient.get(`${ASSIGNMENTS_PATH}/${assignmentId}/submissions`, {
       headers: authHeaders(accessToken),
+      params,
     });
     return teacherSubmissionListSchema.parse(data);
   }

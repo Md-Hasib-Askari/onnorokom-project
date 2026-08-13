@@ -48,7 +48,7 @@ export const VALIDATION_MESSAGES = {
   deadlineRequired: "Deadline is required.",
   deadlineInvalid: "Enter a valid date and time.",
   deadlineMustBeFuture: "Deadline must be in the future.",
-  maxMarksPositive: "Maximum marks must be greater than zero.",
+  maxMarksPositive: "Total marks must be greater than zero.",
   marksNotNegative: "Marks cannot be negative.",
   marksAboveMax: (maxMarks: number) => `Marks cannot exceed ${maxMarks}.`,
   submissionWorkRequired: "Enter your work or attach a link.",

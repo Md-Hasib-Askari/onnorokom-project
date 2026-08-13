@@ -64,11 +64,21 @@ export async function listSectionSubjectsAction() {
   }
 }
 
-export async function listAssignmentsAction() {
+export async function listStudentsAction(params: { limit?: number; cursor?: string } = {}) {
   await requireRole(UserRole.Teacher);
   try {
     const token = await accessTokenOrThrow();
-    return await TeacherApi.listAssignments(token);
+    return await TeacherApi.listStudents(token, params);
+  } catch (error) {
+    redirectOnSessionExpired(error);
+  }
+}
+
+export async function listAssignmentsAction(params: { limit?: number; cursor?: string } = {}) {
+  await requireRole(UserRole.Teacher);
+  try {
+    const token = await accessTokenOrThrow();
+    return await TeacherApi.listAssignments(token, params);
   } catch (error) {
     redirectOnSessionExpired(error);
   }
@@ -84,11 +94,14 @@ export async function getAssignmentAction(id: string) {
   }
 }
 
-export async function listSubmissionsAction(assignmentId: string) {
+export async function listSubmissionsAction(
+  assignmentId: string,
+  params: { limit?: number; cursor?: string } = {}
+) {
   await requireRole(UserRole.Teacher);
   try {
     const token = await accessTokenOrThrow();
-    return await TeacherApi.listSubmissions(token, assignmentId);
+    return await TeacherApi.listSubmissions(token, assignmentId, params);
   } catch (error) {
     redirectOnSessionExpired(error);
   }
@@ -140,6 +153,42 @@ export async function publishAssignmentAction(id: string): Promise<ActionResult>
   try {
     const token = await accessTokenOrThrow();
     await TeacherApi.publishAssignment(token, id);
+  } catch (error) {
+    return failureFrom(error);
+  }
+  revalidateAssignment(id);
+  return { success: true };
+}
+
+export async function unpublishAssignmentAction(id: string): Promise<ActionResult> {
+  await requireRole(UserRole.Teacher);
+  try {
+    const token = await accessTokenOrThrow();
+    await TeacherApi.unpublishAssignment(token, id);
+  } catch (error) {
+    return failureFrom(error);
+  }
+  revalidateAssignment(id);
+  return { success: true };
+}
+
+export async function closeSubmissionsAction(id: string): Promise<ActionResult> {
+  await requireRole(UserRole.Teacher);
+  try {
+    const token = await accessTokenOrThrow();
+    await TeacherApi.closeSubmissions(token, id);
+  } catch (error) {
+    return failureFrom(error);
+  }
+  revalidateAssignment(id);
+  return { success: true };
+}
+
+export async function reopenSubmissionsAction(id: string): Promise<ActionResult> {
+  await requireRole(UserRole.Teacher);
+  try {
+    const token = await accessTokenOrThrow();
+    await TeacherApi.reopenSubmissions(token, id);
   } catch (error) {
     return failureFrom(error);
   }

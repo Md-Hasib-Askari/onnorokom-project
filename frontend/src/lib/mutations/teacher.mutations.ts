@@ -2,11 +2,14 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  closeSubmissionsAction,
   createAssignmentAction,
   deleteAssignmentAction,
   gradeSubmissionAction,
   publishAssignmentAction,
+  reopenSubmissionsAction,
   returnSubmissionAction,
+  unpublishAssignmentAction,
   updateAssignmentAction,
 } from "@/lib/actions/teacher.actions";
 import type {
@@ -47,6 +50,42 @@ export const TeacherMutations = {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: (id: string) => publishAssignmentAction(id),
+      onSuccess: (result) => {
+        if (result.success) {
+          queryClient.invalidateQueries({ queryKey: teacherKeys.assignments() });
+        }
+      },
+    });
+  },
+
+  useUnpublishAssignment() {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: (id: string) => unpublishAssignmentAction(id),
+      onSuccess: (result) => {
+        if (result.success) {
+          queryClient.invalidateQueries({ queryKey: teacherKeys.assignments() });
+        }
+      },
+    });
+  },
+
+  useCloseSubmissions() {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: (id: string) => closeSubmissionsAction(id),
+      onSuccess: (result) => {
+        if (result.success) {
+          queryClient.invalidateQueries({ queryKey: teacherKeys.assignments() });
+        }
+      },
+    });
+  },
+
+  useReopenSubmissions() {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: (id: string) => reopenSubmissionsAction(id),
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: teacherKeys.assignments() });

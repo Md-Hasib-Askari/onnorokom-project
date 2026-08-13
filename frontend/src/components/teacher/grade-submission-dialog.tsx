@@ -89,7 +89,7 @@ export function GradeSubmissionDialog({
 
   return (
     <Dialog open={!!submission} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Grade {submission.studentName}</DialogTitle>
           <DialogDescription>

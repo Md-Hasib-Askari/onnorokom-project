@@ -61,7 +61,7 @@ export function TeacherOverview({ fullName }: { fullName: string }) {
       ) : query.isError ? (
         <p className="text-sm text-destructive">Failed to load your assignments.</p>
       ) : (
-        <StatGrid stats={summarise(query.data ?? [])} />
+        <StatGrid stats={summarise(query.data?.pages.flatMap((page) => page.items) ?? [])} />
       )}
     </div>
   );
