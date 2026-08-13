@@ -12,6 +12,14 @@ public interface IAssignmentRepository
         Guid? afterId,
         CancellationToken ct = default);
     Task<Assignment?> GetByIdAsync(Guid id, CancellationToken ct = default);
+
+    /// <summary>Keyset page of one teacher's assignments ordered by <c>(CreatedAt, Id)</c> descending.</summary>
+    Task<PagedResult<Assignment>> GetPageByTeacherAsync(
+        Guid teacherId,
+        int limit,
+        DateTimeOffset? afterCreatedAt,
+        Guid? afterId,
+        CancellationToken ct = default);
     Task<List<Assignment>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default);
 
     /// <summary>

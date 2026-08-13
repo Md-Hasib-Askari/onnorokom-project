@@ -14,6 +14,7 @@ public class Assignment : BaseEntity
     public decimal MaxMarks { get; private set; }
     public AssignmentStatus Status { get; private set; }
     public bool AllowLateSubmission { get; private set; }
+    public bool SubmissionsOpen { get; private set; }
 
     public virtual Section? Section { get; private set; }
     public virtual Subject? Subject { get; private set; }
@@ -43,7 +44,8 @@ public class Assignment : BaseEntity
             MaxMarks = maxMarks,
             Description = description,
             AllowLateSubmission = allowLateSubmission,
-            Status = AssignmentStatus.Draft
+            Status = AssignmentStatus.Draft,
+            SubmissionsOpen = true
         };
     }
 
@@ -66,8 +68,8 @@ public class Assignment : BaseEntity
     }
 
     /// <summary>
-    /// Publishing is one-way. Callers pre-check <see cref="Status"/> and surface a domain error;
-    /// the throw here is a last-line assertion so a missed check cannot silently no-op.
+    /// Callers pre-check <see cref="Status"/> and surface a domain error; the throw here is a
+    /// last-line assertion so a missed check cannot silently no-op.
     /// </summary>
     public void Publish()
     {
@@ -79,8 +81,53 @@ public class Assignment : BaseEntity
         Status = AssignmentStatus.Published;
     }
 
+    /// <summary>
+    /// Callers pre-check <see cref="Status"/> and surface a domain error; the throw here is a
+    /// last-line assertion so a missed check cannot silently no-op. Existing submissions are left
+    /// untouched, unpublishing only removes the assignment from the student-visible list.
+    /// </summary>
+    public void Unpublish()
+    {
+        if (Status == AssignmentStatus.Draft)
+        {
+            throw new InvalidOperationException("Assignment is already a draft.");
+        }
+
+        Status = AssignmentStatus.Draft;
+    }
+
+    /// <summary>
+    /// Callers pre-check <see cref="SubmissionsOpen"/> and surface a domain error; the throw here is
+    /// a last-line assertion so a missed check cannot silently no-op. Closing blocks everything,
+    /// including work already sent back to a student for revision.
+    /// </summary>
+    public void CloseSubmissions()
+    {
+        if (!SubmissionsOpen)
+        {
+            throw new InvalidOperationException("Submissions are already closed for this assignment.");
+        }
+
+        SubmissionsOpen = false;
+    }
+
+    /// <summary>
+    /// Callers pre-check <see cref="SubmissionsOpen"/> and surface a domain error; the throw here is
+    /// a last-line assertion so a missed check cannot silently no-op. Reopening only lifts the manual
+    /// block; the deadline/<see cref="AllowLateSubmission"/> rule still applies afterward.
+    /// </summary>
+    public void ReopenSubmissions()
+    {
+        if (SubmissionsOpen)
+        {
+            throw new InvalidOperationException("Submissions are already open for this assignment.");
+        }
+
+        SubmissionsOpen = true;
+    }
+
     public bool IsPastDeadline(DateTimeOffset now) => now > Deadline;
 
     public bool IsAcceptingSubmissions(DateTimeOffset now) =>
-        Status == AssignmentStatus.Published && (!IsPastDeadline(now) || AllowLateSubmission);
+        Status == AssignmentStatus.Published && SubmissionsOpen && (!IsPastDeadline(now) || AllowLateSubmission);
 }

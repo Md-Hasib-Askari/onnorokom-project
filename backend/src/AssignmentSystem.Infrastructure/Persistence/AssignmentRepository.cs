@@ -26,6 +26,21 @@ public class AssignmentRepository(AppDbContext dbContext) : IAssignmentRepositor
         return await WithDetails().FirstOrDefaultAsync(a => a.Id == id, ct);
     }
 
+    public async Task<PagedResult<Assignment>> GetPageByTeacherAsync(
+        Guid teacherId,
+        int limit,
+        DateTimeOffset? afterCreatedAt,
+        Guid? afterId,
+        CancellationToken ct = default)
+    {
+        var rows = await WithDetails()
+            .Where(a => a.TeacherId == teacherId)
+            .ApplyKeysetPaging(a => a.CreatedAt, afterCreatedAt, afterId, descending: true, limit)
+            .ToListAsync(ct);
+
+        return PagedResult<Assignment>.FromRows(rows, limit, last => CursorCodec.Encode(last.CreatedAt, last.Id));
+    }
+
     public async Task<List<Assignment>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default)
     {
         return await WithDetails()

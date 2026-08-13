@@ -181,17 +181,26 @@ public class TeacherAssignmentServiceTests
 
     private sealed class FakeAssignmentRepository(FakeSubmissionRepository submissions) : IAssignmentRepository
     {
+        public List<Assignment> Items { get; } = new();
+
+        public Task<List<Assignment>> GetAllAsync(CancellationToken ct = default)
+            => Task.FromResult(Items.ToList());
+
         public Task<PagedResult<Assignment>> GetPageAsync(
             int limit,
             DateTimeOffset? afterCreatedAt,
             Guid? afterId,
             CancellationToken ct = default)
-            => Task.FromResult(PagedResult<Assignment>.FromAll([]));
+            => Task.FromResult(PagedResult<Assignment>.FromAll(Items));
 
-        public List<Assignment> Items { get; } = new();
-
-        public Task<List<Assignment>> GetAllAsync(CancellationToken ct = default)
-            => Task.FromResult(Items.ToList());
+        public Task<PagedResult<Assignment>> GetPageByTeacherAsync(
+            Guid teacherId,
+            int limit,
+            DateTimeOffset? afterCreatedAt,
+            Guid? afterId,
+            CancellationToken ct = default)
+            => Task.FromResult(PagedResult<Assignment>.FromAll(
+                Items.Where(a => a.TeacherId == teacherId).ToList()));
 
         public Task<Assignment?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Items.FirstOrDefault(a => a.Id == id));
@@ -225,17 +234,17 @@ public class TeacherAssignmentServiceTests
 
     private sealed class FakeSubmissionRepository : ISubmissionRepository
     {
+        public List<Submission> Items { get; } = new();
+
+        public Task<List<Submission>> GetAllAsync(CancellationToken ct = default)
+            => Task.FromResult(Items.ToList());
+
         public Task<PagedResult<Submission>> GetPageAsync(
             int limit,
             DateTimeOffset? afterSubmittedAt,
             Guid? afterId,
             CancellationToken ct = default)
-            => Task.FromResult(PagedResult<Submission>.FromAll([]));
-
-        public List<Submission> Items { get; } = new();
-
-        public Task<List<Submission>> GetAllAsync(CancellationToken ct = default)
-            => Task.FromResult(Items.ToList());
+            => Task.FromResult(PagedResult<Submission>.FromAll(Items));
 
         public Task<Submission?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Items.FirstOrDefault(s => s.Id == id));

@@ -268,6 +268,15 @@ public class StudentAssignmentServiceTests
         public Task<Assignment?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Items.FirstOrDefault(a => a.Id == id));
 
+        public Task<PagedResult<Assignment>> GetPageByTeacherAsync(
+            Guid teacherId,
+            int limit,
+            DateTimeOffset? afterCreatedAt,
+            Guid? afterId,
+            CancellationToken ct = default)
+            => Task.FromResult(PagedResult<Assignment>.FromAll(
+                Items.Where(a => a.TeacherId == teacherId).ToList()));
+
         public Task<List<Assignment>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default)
             => Task.FromResult(Items.Where(a => a.TeacherId == teacherId).ToList());
 
