@@ -41,10 +41,15 @@ const LOCK_REASONS = {
     title: "The deadline has passed",
     description: "This assignment does not accept late submissions.",
   },
+  closedByTeacher: {
+    title: "Submissions are closed",
+    description: "Your teacher has turned off submissions for this assignment.",
+  },
 } as const;
 
 function lockReason(assignment: StudentAssignmentDetail) {
   if (assignment.submissionStatus === SubmissionStatus.Graded) return LOCK_REASONS.graded;
+  if (!assignment.submissionsOpen) return LOCK_REASONS.closedByTeacher;
   return LOCK_REASONS.deadlinePassed;
 }
 

@@ -6,6 +6,7 @@ import {
   type StudentAssignmentListItem,
   type SubmissionRequest,
 } from "./schemas/student.schema";
+import type { CursorPage } from "./schemas/common.schema";
 
 const ASSIGNMENTS_PATH = "/api/student/assignments";
 
@@ -14,9 +15,13 @@ const submissionPath = (assignmentId: string) => `${ASSIGNMENTS_PATH}/${assignme
 
 /** `/api/student/*`, requires a Student access token. Every route is scoped to the caller's section. */
 export class StudentApi {
-  static async listAssignments(accessToken: string): Promise<StudentAssignmentListItem[]> {
+  static async listAssignments(
+    accessToken: string,
+    params: { limit?: number; cursor?: string } = {}
+  ): Promise<CursorPage<StudentAssignmentListItem>> {
     const { data } = await apiClient.get(ASSIGNMENTS_PATH, {
       headers: authHeaders(accessToken),
+      params,
     });
     return studentAssignmentListSchema.parse(data);
   }

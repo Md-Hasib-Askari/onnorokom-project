@@ -45,11 +45,11 @@ function revalidateAssignment(assignmentId: string) {
 
 // ---- Reads ----
 
-export async function listMyAssignmentsAction() {
+export async function listMyAssignmentsAction(params: { limit?: number; cursor?: string } = {}) {
   await requireRole(UserRole.Student);
   try {
     const token = await accessTokenOrThrow();
-    return await StudentApi.listAssignments(token);
+    return await StudentApi.listAssignments(token, params);
   } catch (error) {
     redirectOnSessionExpired(error);
   }

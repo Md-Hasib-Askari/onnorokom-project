@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/workspace/error-state";
 
 /** One tile per stat below. */
 const SKELETON_TILE_COUNT = 4;
@@ -35,12 +36,14 @@ function needsWork(assignment: StudentAssignmentListItem): boolean {
 
 /** Matches the server's rule for whether a write will still be accepted. */
 function isOpen(assignment: StudentAssignmentListItem): boolean {
-  return !assignment.isPastDeadline || assignment.allowLateSubmission;
+  return assignment.submissionsOpen && (!assignment.isPastDeadline || assignment.allowLateSubmission);
 }
 
 /**
  * Derived on the client from the list the student already has, so the overview costs no extra
- * request. A dedicated stats endpoint can replace this if the list ever pages.
+ * request. The list is now cursor-paginated, so these figures cover only the pages loaded so far
+ * (preview semantics). A dedicated stats endpoint can replace this if the overview ever needs to
+ * reflect the whole list.
  */
 function summarise(assignments: StudentAssignmentListItem[]): OverviewStats {
   let toDo = 0;
@@ -67,7 +70,7 @@ function dueSoon(assignments: StudentAssignmentListItem[]): StudentAssignmentLis
 
 export function StudentOverview({ fullName }: { fullName: string }) {
   const query = StudentQueries.useAssignments();
-  const assignments = query.data ?? [];
+  const assignments = query.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <div className="space-y-6">
@@ -86,14 +89,37 @@ export function StudentOverview({ fullName }: { fullName: string }) {
       {query.isLoading ? (
         <StatsSkeleton />
       ) : query.isError ? (
-        <p className="text-sm text-destructive">Failed to load your assignments.</p>
+        <ErrorState description="Failed to load your assignments." retry={query.refetch} />
       ) : (
-        <>
+        <Section
+          title="Assignments"
+          description="What is due, what you are waiting on, and what has come back marked."
+        >
           <StatGrid stats={summarise(assignments)} />
           <DueSoonCard assignments={dueSoon(assignments)} />
-        </>
+        </Section>
       )}
     </div>
+  );
+}
+
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      {children}
+    </section>
   );
 }
 

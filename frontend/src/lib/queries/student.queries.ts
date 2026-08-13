@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { getMyAssignmentAction, listMyAssignmentsAction } from "@/lib/actions/student.actions";
 
 export const studentKeys = {
@@ -13,9 +13,12 @@ export const studentKeys = {
 /** Grouped under one namespace so every student query is defined in a single place. */
 export const StudentQueries = {
   useAssignments() {
-    return useQuery({
+    return useInfiniteQuery({
       queryKey: studentKeys.assignmentList(),
-      queryFn: () => listMyAssignmentsAction(),
+      queryFn: ({ pageParam }) =>
+        listMyAssignmentsAction(pageParam ? { cursor: pageParam } : {}),
+      initialPageParam: undefined as string | undefined,
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     });
   },
 

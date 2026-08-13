@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { VALIDATION_MESSAGES } from "@/lib/messages";
+import { cursorPageSchema } from "./common.schema";
 import { submissionStatusSchema } from "./admin-assignments.schema";
 
 export const SUBMISSION_CONTENT_MAX_LENGTH = 10000;
@@ -22,13 +23,14 @@ export const studentAssignmentListItemSchema = z.object({
   maxMarks: z.number(),
   allowLateSubmission: z.boolean(),
   isPastDeadline: z.boolean(),
+  submissionsOpen: z.boolean(),
   submissionStatus: submissionStatusSchema.nullable(),
   isLate: z.boolean(),
   marks: z.number().nullable(),
 });
 export type StudentAssignmentListItem = z.infer<typeof studentAssignmentListItemSchema>;
 
-export const studentAssignmentListSchema = z.array(studentAssignmentListItemSchema);
+export const studentAssignmentListSchema = cursorPageSchema(studentAssignmentListItemSchema);
 
 // ---- GET /api/student/assignments/:id ----
 
