@@ -20,7 +20,6 @@ public interface IAssignmentRepository
         DateTimeOffset? afterCreatedAt,
         Guid? afterId,
         CancellationToken ct = default);
-    Task<List<Assignment>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default);
 
     /// <summary>
     /// The student-facing feed. Drafts are excluded at the query rather than filtered later, so a

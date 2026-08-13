@@ -1,4 +1,5 @@
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Teacher;
 using AssignmentSystem.Domain.Enums;
 using FluentValidation;
@@ -17,9 +18,12 @@ public class TeacherAssignmentController(
     IValidator<AssignmentUpdateRequest> updateValidator) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetMine(CancellationToken ct)
+    public async Task<IActionResult> GetMine(
+        [FromQuery] int? limit,
+        [FromQuery] string? cursor,
+        CancellationToken ct)
     {
-        var assignments = await teacherAssignmentService.GetMyAssignmentsAsync(ct);
+        var assignments = await teacherAssignmentService.GetMyAssignmentsAsync(new PageRequest(limit), cursor, ct);
         return Ok(assignments);
     }
 
@@ -63,17 +67,31 @@ public class TeacherAssignmentController(
         return Ok(assignment);
     }
 
+    [HttpPost("{id}/unpublish")]
+    public async Task<IActionResult> Unpublish(Guid id, CancellationToken ct)
+    {
+        var assignment = await teacherAssignmentService.UnpublishAsync(id, ct);
+        return Ok(assignment);
+    }
+
+    [HttpPost("{id}/close-submissions")]
+    public async Task<IActionResult> CloseSubmissions(Guid id, CancellationToken ct)
+    {
+        var assignment = await teacherAssignmentService.CloseSubmissionsAsync(id, ct);
+        return Ok(assignment);
+    }
+
+    [HttpPost("{id}/reopen-submissions")]
+    public async Task<IActionResult> ReopenSubmissions(Guid id, CancellationToken ct)
+    {
+        var assignment = await teacherAssignmentService.ReopenSubmissionsAsync(id, ct);
+        return Ok(assignment);
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await teacherAssignmentService.DeleteAsync(id, ct);
         return NoContent();
-    }
-
-    [HttpGet("{id}/submissions")]
-    public async Task<IActionResult> GetSubmissions(Guid id, CancellationToken ct)
-    {
-        var submissions = await teacherSubmissionService.GetForAssignmentAsync(id, ct);
-        return Ok(submissions);
     }
 }

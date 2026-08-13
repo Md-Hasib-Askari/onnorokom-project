@@ -1,6 +1,7 @@
 using AssignmentSystem.Application.Common;
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Assignments;
 using AssignmentSystem.Application.DTOs.Teacher;
 using AssignmentSystem.Domain.Entities;
@@ -12,14 +13,15 @@ public class TeacherAssignmentService(
     IAssignmentRepository assignmentRepository,
     ISubmissionRepository submissionRepository,
     ISectionSubjectRepository sectionSubjectRepository,
+    IProfileRepository profileRepository,
     ICurrentUser currentUser) : ITeacherAssignmentService
 {
-    public async Task<List<TeacherSectionSubjectDto>> GetMySectionSubjectsAsync(CancellationToken ct = default)
+    public async Task<PagedResult<TeacherSectionSubjectDto>> GetMySectionSubjectsAsync(CancellationToken ct = default)
     {
         var teacherId = currentUser.GetRequiredUserId();
         var links = await sectionSubjectRepository.GetByTeacherAsync(teacherId, ct);
 
-        return links.Select(link => new TeacherSectionSubjectDto(
+        var items = links.Select(link => new TeacherSectionSubjectDto(
             link.SectionId,
             link.Section?.Name,
             link.Section?.GradeId ?? Guid.Empty,
@@ -27,16 +29,31 @@ public class TeacherAssignmentService(
             link.SubjectId,
             link.Subject?.Name,
             link.Subject?.Code)).ToList();
+
+        return PagedResult<TeacherSectionSubjectDto>.FromAll(items);
     }
 
-    public async Task<List<TeacherAssignmentDto>> GetMyAssignmentsAsync(CancellationToken ct = default)
+    public async Task<PagedResult<TeacherAssignmentDto>> GetMyAssignmentsAsync(
+        PageRequest page,
+        string? cursor,
+        CancellationToken ct = default)
     {
         var teacherId = currentUser.GetRequiredUserId();
-        var assignments = await assignmentRepository.GetByTeacherAsync(teacherId, ct);
 
-        var counts = await submissionRepository.GetCountsByAssignmentIdsAsync(assignments.Select(a => a.Id), ct);
+        DateTimeOffset? afterCreatedAt = null;
+        Guid? afterId = null;
+        if (cursor is not null)
+        {
+            (afterCreatedAt, afterId) = CursorCodec.DecodeTimestamp(cursor);
+        }
 
-        return assignments.Select(a => ToDto(a, counts.GetValueOrDefault(a.Id))).ToList();
+        var assignments = await assignmentRepository.GetPageByTeacherAsync(
+            teacherId, page.Limit, afterCreatedAt, afterId, ct);
+
+        var counts = await submissionRepository.GetCountsByAssignmentIdsAsync(
+            assignments.Items.Select(a => a.Id), ct);
+
+        return assignments.Map(a => ToDto(a, counts.GetValueOrDefault(a.Id)));
     }
 
     public async Task<TeacherAssignmentDto> GetByIdAsync(Guid id, CancellationToken ct = default)
@@ -113,6 +130,51 @@ public class TeacherAssignmentService(
         return await GetByIdAsync(id, ct);
     }
 
+    public async Task<TeacherAssignmentDto> UnpublishAsync(Guid id, CancellationToken ct = default)
+    {
+        var assignment = await LoadOwnedAsync(id, ct);
+
+        if (assignment.Status == AssignmentStatus.Draft)
+        {
+            throw new DomainException("This assignment is already a draft.");
+        }
+
+        assignment.Unpublish();
+        await assignmentRepository.UpdateAsync(assignment, ct);
+
+        return await GetByIdAsync(id, ct);
+    }
+
+    public async Task<TeacherAssignmentDto> CloseSubmissionsAsync(Guid id, CancellationToken ct = default)
+    {
+        var assignment = await LoadOwnedAsync(id, ct);
+
+        if (!assignment.SubmissionsOpen)
+        {
+            throw new DomainException("Submissions are already closed for this assignment.");
+        }
+
+        assignment.CloseSubmissions();
+        await assignmentRepository.UpdateAsync(assignment, ct);
+
+        return await GetByIdAsync(id, ct);
+    }
+
+    public async Task<TeacherAssignmentDto> ReopenSubmissionsAsync(Guid id, CancellationToken ct = default)
+    {
+        var assignment = await LoadOwnedAsync(id, ct);
+
+        if (assignment.SubmissionsOpen)
+        {
+            throw new DomainException("Submissions are already open for this assignment.");
+        }
+
+        assignment.ReopenSubmissions();
+        await assignmentRepository.UpdateAsync(assignment, ct);
+
+        return await GetByIdAsync(id, ct);
+    }
+
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         var assignment = await LoadOwnedAsync(id, ct);
@@ -148,6 +210,7 @@ public class TeacherAssignmentService(
         assignment.MaxMarks,
         assignment.Status,
         assignment.AllowLateSubmission,
+        assignment.SubmissionsOpen,
         counts?.Total ?? 0,
         counts?.Graded ?? 0);
 }

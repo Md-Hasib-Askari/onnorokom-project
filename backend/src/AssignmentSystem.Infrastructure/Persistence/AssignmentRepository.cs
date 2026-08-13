@@ -41,14 +41,6 @@ public class AssignmentRepository(AppDbContext dbContext) : IAssignmentRepositor
         return PagedResult<Assignment>.FromRows(rows, limit, last => CursorCodec.Encode(last.CreatedAt, last.Id));
     }
 
-    public async Task<List<Assignment>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default)
-    {
-        return await WithDetails()
-            .Where(a => a.TeacherId == teacherId)
-            .OrderByDescending(a => a.CreatedAt)
-            .ToListAsync(ct);
-    }
-
     public async Task<List<Assignment>> GetPublishedForSectionAsync(Guid sectionId, CancellationToken ct = default)
     {
         return await WithDetails()

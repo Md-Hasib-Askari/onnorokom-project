@@ -15,5 +15,6 @@ public record TeacherAssignmentDto(
     decimal MaxMarks,
     AssignmentStatus Status,
     bool AllowLateSubmission,
+    bool SubmissionsOpen,
     int SubmissionCount,
     int GradedCount);
