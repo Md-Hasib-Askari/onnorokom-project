@@ -346,8 +346,14 @@ public class TeacherAssignmentServiceTests
         public Task<Submission?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Items.FirstOrDefault(s => s.Id == id));
 
-        public Task<List<Submission>> GetByAssignmentAsync(Guid assignmentId, CancellationToken ct = default)
-            => Task.FromResult(Items.Where(s => s.AssignmentId == assignmentId).ToList());
+        public Task<PagedResult<Submission>> GetPageByAssignmentAsync(
+            Guid assignmentId,
+            int limit,
+            string? afterFullName,
+            Guid? afterId,
+            CancellationToken ct = default)
+            => Task.FromResult(PagedResult<Submission>.FromAll(
+                Items.Where(s => s.AssignmentId == assignmentId).ToList()));
 
         public Task<Submission?> GetByAssignmentAndStudentAsync(Guid assignmentId, Guid studentId, CancellationToken ct = default)
             => Task.FromResult(Items.FirstOrDefault(s => s.AssignmentId == assignmentId && s.StudentId == studentId));

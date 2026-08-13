@@ -1,6 +1,7 @@
 using AssignmentSystem.Application.Common;
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Teacher;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
@@ -13,17 +14,30 @@ public class TeacherSubmissionService(
     IProfileRepository profileRepository,
     ICurrentUser currentUser) : ITeacherSubmissionService
 {
-    public async Task<List<TeacherSubmissionDto>> GetForAssignmentAsync(Guid assignmentId, CancellationToken ct = default)
+    public async Task<PagedResult<TeacherSubmissionDto>> GetForAssignmentAsync(
+        Guid assignmentId,
+        PageRequest page,
+        string? cursor,
+        CancellationToken ct = default)
     {
         var assignment = await LoadOwnedAssignmentAsync(assignmentId, ct);
-        var submissions = await submissionRepository.GetByAssignmentAsync(assignmentId, ct);
 
-        var profiles = await profileRepository.GetStudentsByUserIdsAsync(submissions.Select(s => s.StudentId), ct);
+        string? afterFullName = null;
+        Guid? afterId = null;
+        if (cursor is not null)
+        {
+            (afterFullName, afterId) = CursorCodec.DecodeString(cursor);
+        }
+
+        var submissions = await submissionRepository.GetPageByAssignmentAsync(
+            assignmentId, page.Limit, afterFullName, afterId, ct);
+
+        var profiles = await profileRepository.GetStudentsByUserIdsAsync(
+            submissions.Items.Select(s => s.StudentId), ct);
         var rollNumberByStudentId = profiles.ToDictionary(p => p.AuthUserId, p => p.RollNumber);
 
-        return submissions
-            .Select(s => ToDto(s, assignment, rollNumberByStudentId.GetValueOrDefault(s.StudentId)))
-            .ToList();
+        return submissions.Map(
+            s => ToDto(s, assignment, rollNumberByStudentId.GetValueOrDefault(s.StudentId)));
     }
 
     public async Task<TeacherSubmissionDto> GradeAsync(Guid submissionId, GradeSubmissionRequest request, CancellationToken ct = default)

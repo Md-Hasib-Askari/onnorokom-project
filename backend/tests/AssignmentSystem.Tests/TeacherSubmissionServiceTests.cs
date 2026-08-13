@@ -120,7 +120,7 @@ public class TeacherSubmissionServiceTests
         var assignment = SeedAssignment(teacherId: Guid.NewGuid());
         SeedSubmission(assignment);
 
-        await Assert.ThrowsAsync<ForbiddenException>(() => _sut.GetForAssignmentAsync(assignment.Id));
+        await Assert.ThrowsAsync<ForbiddenException>(() => _sut.GetForAssignmentAsync(assignment.Id, new PageRequest(null), null));
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class TeacherSubmissionServiceTests
         var assignment = SeedAssignment(deadline: DateTimeOffset.UtcNow.AddDays(-1));
         SeedSubmission(assignment);
 
-        var dto = Assert.Single(await _sut.GetForAssignmentAsync(assignment.Id));
+        var dto = Assert.Single((await _sut.GetForAssignmentAsync(assignment.Id, new PageRequest(null), null)).Items);
 
         Assert.True(dto.IsLate);
         Assert.Equal(_studentId, dto.StudentId);
@@ -141,17 +141,47 @@ public class TeacherSubmissionServiceTests
         var assignment = SeedAssignment();
         SeedSubmission(assignment);
 
-        var dto = Assert.Single(await _sut.GetForAssignmentAsync(assignment.Id));
+        var dto = Assert.Single((await _sut.GetForAssignmentAsync(assignment.Id, new PageRequest(null), null)).Items);
 
         Assert.False(dto.IsLate);
     }
 
+    [Fact]
+    public async Task GetForAssignment_PagesByStudentNameAndWalksTheCursor()
+    {
+        var assignment = SeedAssignment();
+        var alice = SeedSubmissionForStudent(assignment, "Alice");
+        var bob = SeedSubmissionForStudent(assignment, "Bob");
+        var carol = SeedSubmissionForStudent(assignment, "Carol");
+
+        var firstPage = await _sut.GetForAssignmentAsync(assignment.Id, new PageRequest(2), null);
+
+        Assert.Equal([alice.Id, bob.Id], firstPage.Items.Select(s => s.Id).ToArray());
+        Assert.True(firstPage.HasMore);
+        Assert.NotNull(firstPage.NextCursor);
+
+        var secondPage = await _sut.GetForAssignmentAsync(assignment.Id, new PageRequest(2), firstPage.NextCursor);
+
+        Assert.Equal([carol.Id], secondPage.Items.Select(s => s.Id).ToArray());
+        Assert.False(secondPage.HasMore);
+        Assert.Null(secondPage.NextCursor);
+    }
+
+    private Submission SeedSubmissionForStudent(Assignment assignment, string fullName)
+    {
+        var submission = Submission.Create(assignment.Id, Guid.NewGuid(), "My answer");
+        var student = AuthUser.CreatePending(fullName, $"{fullName}@example.com", "hash", UserRole.Student);
+        typeof(Submission)
+            .GetProperty(nameof(Submission.Student))!
+            .SetValue(submission, student);
+        _submissions.Items.Add(submission);
+        return submission;
+    }
+
     private sealed class FakeAssignmentRepository : IAssignmentRepository
     {
-        public List<Assignment> Items { get; } = new();
 
-        public Task<List<Assignment>> GetAllAsync(CancellationToken ct = default)
-            => Task.FromResult(Items.ToList());
+        public List<Assignment> Items { get; } = new();
 
         public Task<PagedResult<Assignment>> GetPageAsync(
             int limit,
@@ -159,6 +189,9 @@ public class TeacherSubmissionServiceTests
             Guid? afterId,
             CancellationToken ct = default)
             => Task.FromResult(PagedResult<Assignment>.FromAll(Items));
+
+        public Task<Assignment?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(Items.FirstOrDefault(a => a.Id == id));
 
         public Task<PagedResult<Assignment>> GetPageByTeacherAsync(
             Guid teacherId,
@@ -168,12 +201,6 @@ public class TeacherSubmissionServiceTests
             CancellationToken ct = default)
             => Task.FromResult(PagedResult<Assignment>.FromAll(
                 Items.Where(a => a.TeacherId == teacherId).ToList()));
-
-        public Task<Assignment?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => Task.FromResult(Items.FirstOrDefault(a => a.Id == id));
-
-        public Task<List<Assignment>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default)
-            => Task.FromResult(Items.Where(a => a.TeacherId == teacherId).ToList());
 
         public Task<List<Assignment>> GetPublishedForSectionAsync(Guid sectionId, CancellationToken ct = default)
             => Task.FromResult(Items
@@ -201,10 +228,8 @@ public class TeacherSubmissionServiceTests
 
     private sealed class FakeSubmissionRepository : ISubmissionRepository
     {
-        public List<Submission> Items { get; } = new();
 
-        public Task<List<Submission>> GetAllAsync(CancellationToken ct = default)
-            => Task.FromResult(Items.ToList());
+        public List<Submission> Items { get; } = new();
 
         public Task<PagedResult<Submission>> GetPageAsync(
             int limit,
@@ -216,8 +241,29 @@ public class TeacherSubmissionServiceTests
         public Task<Submission?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Items.FirstOrDefault(s => s.Id == id));
 
-        public Task<List<Submission>> GetByAssignmentAsync(Guid assignmentId, CancellationToken ct = default)
-            => Task.FromResult(Items.Where(s => s.AssignmentId == assignmentId).ToList());
+        public Task<PagedResult<Submission>> GetPageByAssignmentAsync(
+            Guid assignmentId,
+            int limit,
+            string? afterFullName,
+            Guid? afterId,
+            CancellationToken ct = default)
+        {
+            var ordered = Items
+                .Where(s => s.AssignmentId == assignmentId)
+                .OrderBy(s => s.Student?.FullName, StringComparer.Ordinal)
+                .ThenBy(s => s.Id)
+                .ToList();
+
+            var rows = ordered
+                .Where(s => afterFullName == null
+                    || string.Compare(s.Student?.FullName, afterFullName, StringComparison.Ordinal) > 0
+                    || (s.Student?.FullName == afterFullName && s.Id > afterId))
+                .Take(limit + 1)
+                .ToList();
+
+            return Task.FromResult(PagedResult<Submission>.FromRows(
+                rows, limit, last => CursorCodec.Encode(last.Student?.FullName ?? string.Empty, last.Id)));
+        }
 
         public Task<Submission?> GetByAssignmentAndStudentAsync(Guid assignmentId, Guid studentId, CancellationToken ct = default)
             => Task.FromResult(Items.FirstOrDefault(s => s.AssignmentId == assignmentId && s.StudentId == studentId));
@@ -263,6 +309,12 @@ public class TeacherSubmissionServiceTests
 
     private sealed class FakeProfileRepository : IProfileRepository
     {
+
+        public Task<int> CountStudentsBySectionIdsAsync(IEnumerable<Guid> sectionIds, CancellationToken ct = default)
+        {
+            var ids = sectionIds.ToHashSet();
+            return Task.FromResult(Students.Count(p => ids.Contains(p.SectionId)));
+        }
         public List<StudentProfile> Students { get; } = new();
 
         public Task<StudentProfile?> GetStudentByUserIdAsync(Guid authUserId, CancellationToken ct = default)
@@ -272,6 +324,18 @@ public class TeacherSubmissionServiceTests
         {
             var ids = authUserIds.ToHashSet();
             return Task.FromResult(Students.Where(p => ids.Contains(p.AuthUserId)).ToList());
+        }
+
+        public Task<PagedResult<StudentProfile>> GetStudentsPageBySectionIdsAsync(
+            IEnumerable<Guid> sectionIds,
+            int limit,
+            string? afterSectionName,
+            string? afterFullName,
+            Guid? afterId,
+            CancellationToken ct = default)
+        {
+            return Task.FromResult(PagedResult<StudentProfile>.FromAll(
+                Students.Where(p => sectionIds.Contains(p.SectionId)).ToList()));
         }
 
         public Task<TeacherProfile?> GetTeacherByUserIdAsync(Guid authUserId, CancellationToken ct = default)

@@ -13,7 +13,16 @@ public interface ISubmissionRepository
         Guid? afterId,
         CancellationToken ct = default);
     Task<Submission?> GetByIdAsync(Guid id, CancellationToken ct = default);
-    Task<List<Submission>> GetByAssignmentAsync(Guid assignmentId, CancellationToken ct = default);
+    /// <summary>
+    /// Keyset page of one assignment's submissions ordered by <c>(Student.FullName, Id)</c>
+    /// ascending, which is the stable order a teacher grades against.
+    /// </summary>
+    Task<PagedResult<Submission>> GetPageByAssignmentAsync(
+        Guid assignmentId,
+        int limit,
+        string? afterFullName,
+        Guid? afterId,
+        CancellationToken ct = default);
 
     Task<Submission?> GetByAssignmentAndStudentAsync(Guid assignmentId, Guid studentId, CancellationToken ct = default);
 

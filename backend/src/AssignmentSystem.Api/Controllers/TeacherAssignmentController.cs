@@ -94,4 +94,15 @@ public class TeacherAssignmentController(
         await teacherAssignmentService.DeleteAsync(id, ct);
         return NoContent();
     }
+
+    [HttpGet("{id}/submissions")]
+    public async Task<IActionResult> GetSubmissions(
+        Guid id,
+        [FromQuery] int? limit,
+        [FromQuery] string? cursor,
+        CancellationToken ct)
+    {
+        var submissions = await teacherSubmissionService.GetForAssignmentAsync(id, new PageRequest(limit), cursor, ct);
+        return Ok(submissions);
+    }
 }

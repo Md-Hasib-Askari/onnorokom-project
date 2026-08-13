@@ -34,11 +34,21 @@ public class SubmissionRepository(AppDbContext dbContext) : ISubmissionRepositor
             .FirstOrDefaultAsync(s => s.Id == id, ct);
     }
 
-    public async Task<List<Submission>> GetByAssignmentAsync(Guid assignmentId, CancellationToken ct = default)
+    public async Task<PagedResult<Submission>> GetPageByAssignmentAsync(
+        Guid assignmentId,
+        int limit,
+        string? afterFullName,
+        Guid? afterId,
+        CancellationToken ct = default)
     {
-        return await dbContext.Submissions
+        var rows = await dbContext.Submissions
+            .Include(s => s.Assignment)
+            .Include(s => s.Student)
             .Where(s => s.AssignmentId == assignmentId)
+            .ApplyKeysetPaging(s => s.Student!.FullName, afterFullName, afterId, descending: false, limit)
             .ToListAsync(ct);
+
+        return PagedResult<Submission>.FromRows(rows, limit, last => CursorCodec.Encode(last.Student!.FullName, last.Id));
     }
 
     public async Task<Submission?> GetByAssignmentAndStudentAsync(Guid assignmentId, Guid studentId, CancellationToken ct = default)
