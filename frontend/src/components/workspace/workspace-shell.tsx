@@ -3,6 +3,7 @@ import type { SessionUser } from "@/lib/auth/session-schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
+import { MobileNav } from "./mobile-nav";
 import { SidebarNav, type SidebarNavItem } from "./sidebar-nav";
 
 /** Longest set of initials rendered in the sidebar avatar. */
@@ -41,7 +42,8 @@ export function WorkspaceShell({
   const initials = initialsOf(session.fullName);
 
   return (
-    <div className="flex min-h-svh bg-muted/30">
+    <div className="flex min-h-svh flex-col bg-muted/30 md:flex-row">
+      <MobileNav title={title} icon={icon} navItems={navItems} session={session} initials={initials} />
       <aside className="sticky top-0 hidden h-svh w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
         <div className="flex h-18 items-center justify-between gap-2.5 px-6">
           <div className="flex items-center gap-2.5">

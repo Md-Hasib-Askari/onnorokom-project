@@ -22,7 +22,14 @@ function matchesPath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function SidebarNav({ items }: { items: SidebarNavItem[] }) {
+export function SidebarNav({
+  items,
+  onNavigate,
+}: {
+  items: SidebarNavItem[];
+  /** Called when a link is activated; the mobile drawer uses it to close itself. */
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
 
   /**
@@ -60,6 +67,7 @@ export function SidebarNav({ items }: { items: SidebarNavItem[] }) {
           <Link
             key={item.href}
             href={item.href}
+            onClick={onNavigate}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
               active && "bg-sidebar-accent text-sidebar-foreground"
