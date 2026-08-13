@@ -1,5 +1,6 @@
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Grades;
 using AssignmentSystem.Domain.Entities;
 using AutoMapper;
@@ -8,10 +9,10 @@ namespace AssignmentSystem.Application.Services;
 
 public class GradeService(IGradeRepository gradeRepository, IMapper mapper) : IGradeService
 {
-    public async Task<List<GradeDto>> GetAllAsync(CancellationToken ct = default)
+    public async Task<PagedResult<GradeDto>> GetAllAsync(CancellationToken ct = default)
     {
         var grades = await gradeRepository.GetAllAsync(ct);
-        return mapper.Map<List<GradeDto>>(grades);
+        return PagedResult<GradeDto>.FromAll(mapper.Map<List<GradeDto>>(grades));
     }
 
     public async Task<GradeDto> CreateAsync(GradeCreateRequest request, CancellationToken ct = default)

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { VALIDATION_MESSAGES } from "@/lib/messages";
+import { cursorPageSchema } from "./common.schema";
 
 // ---- GET /api/admin/grades ----
 
@@ -11,7 +12,7 @@ export const gradeSummarySchema = z.object({
 });
 export type GradeSummary = z.infer<typeof gradeSummarySchema>;
 
-export const gradeListResponseSchema = z.array(gradeSummarySchema);
+export const gradeListResponseSchema = cursorPageSchema(gradeSummarySchema);
 
 // ---- POST /api/admin/grades ----
 

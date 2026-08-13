@@ -134,14 +134,16 @@ public class GradeServiceTests
     }
 
     [Fact]
-    public async Task GetAll_ReturnsAllGrades()
+    public async Task GetAll_ReturnsAllGradesAsAnUnpagedEnvelope()
     {
         _repo.Grades.Add(Grade.Create("Grade 6", "2026"));
         _repo.Grades.Add(Grade.Create("Grade 7", "2026"));
 
-        var grades = await _sut.GetAllAsync();
+        var page = await _sut.GetAllAsync();
 
-        Assert.Equal(2, grades.Count);
+        Assert.Equal(2, page.Items.Count);
+        Assert.False(page.HasMore);
+        Assert.Null(page.NextCursor);
     }
 
     private sealed class FakeGradeRepository : IGradeRepository

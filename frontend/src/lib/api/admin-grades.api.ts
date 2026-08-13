@@ -13,7 +13,7 @@ export class AdminGradesApi {
     const { data } = await apiClient.get("/api/admin/grades", {
       headers: authHeaders(accessToken),
     });
-    return gradeListResponseSchema.parse(data);
+    return gradeListResponseSchema.parse(data).items;
   }
 
   static async create(accessToken: string, payload: GradeCreateRequest): Promise<GradeSummary> {

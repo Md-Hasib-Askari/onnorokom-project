@@ -7,6 +7,7 @@ import { AdminGradeQueries } from "@/lib/queries/admin-grades.queries";
 import { AdminGradeMutations } from "@/lib/mutations/admin-grades.mutations";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/workspace/data-table";
+import { ErrorState } from "@/components/workspace/error-state";
 import { buildGradeColumns } from "./grade-columns";
 import { CreateGradeDialog } from "./create-grade-dialog";
 import { EditGradeDialog } from "./edit-grade-dialog";
@@ -42,7 +43,7 @@ export function GradesView() {
       {gradesQuery.isLoading ? (
         <TableSkeleton />
       ) : gradesQuery.isError ? (
-        <p className="text-sm text-destructive">Failed to load grades.</p>
+        <ErrorState description="Failed to load grades." retry={gradesQuery.refetch} />
       ) : (
         <DataTable columns={columns} data={gradesQuery.data ?? []} emptyMessage="No grades yet." />
       )}
