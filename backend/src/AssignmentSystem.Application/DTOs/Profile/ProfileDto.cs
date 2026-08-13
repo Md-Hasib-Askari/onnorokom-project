@@ -7,4 +7,8 @@ public record ProfileDto(
     string FullName,
     string Email,
     UserRole Role,
-    bool MustChangePassword);
+    bool MustChangePassword,
+    bool CanEditProfile,
+    StudentProfileDetailDto? StudentProfile,
+    TeacherProfileDetailDto? TeacherProfile,
+    AdminProfileDetailDto? AdminProfile);

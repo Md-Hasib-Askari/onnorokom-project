@@ -2,6 +2,14 @@ import { z } from "zod";
 import { VALIDATION_MESSAGES } from "@/lib/messages";
 import { fullNameSchema, userRoleSchema } from "./common.schema";
 import { passwordSchema } from "./auth.schema";
+import {
+  adminProfileDetailSchema,
+  adminProfileInputSchema,
+  studentProfileDetailSchema,
+  studentProfileInputSchema,
+  teacherProfileDetailSchema,
+  teacherProfileInputSchema,
+} from "./admin-users.schema";
 
 // ---- GET /api/profile, PUT /api/profile ----
 
@@ -11,12 +19,23 @@ export const profileSchema = z.object({
   email: z.string(),
   role: userRoleSchema,
   mustChangePassword: z.boolean(),
+  canEditProfile: z.boolean(),
+  studentProfile: studentProfileDetailSchema.nullable(),
+  teacherProfile: teacherProfileDetailSchema.nullable(),
+  adminProfile: adminProfileDetailSchema.nullable(),
 });
 export type Profile = z.infer<typeof profileSchema>;
 
-/** Only the full name is editable; email and role are set by an admin. */
+/**
+ * `fullName` is always editable. The nested profile blocks are only accepted (and only rendered
+ * as editable fields) when the caller's role matches and, for Teacher/Student, an admin hasn't
+ * disabled self-editing for that role (see `profileSchema.canEditProfile`).
+ */
 export const updateProfileRequestSchema = z.object({
   fullName: fullNameSchema,
+  studentProfile: studentProfileInputSchema.optional(),
+  teacherProfile: teacherProfileInputSchema.optional(),
+  adminProfile: adminProfileInputSchema.optional(),
 });
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;
 

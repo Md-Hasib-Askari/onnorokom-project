@@ -7,13 +7,13 @@ import { profileKeys } from "@/lib/queries/profile.queries";
 
 /** Grouped under one namespace so every profile mutation is defined in a single place. */
 export const ProfileMutations = {
-  useUpdate() {
+  useUpdate(userId: string) {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: (values: UpdateProfileRequest) => updateProfileAction(values),
       onSuccess: (result) => {
         if (result.success) {
-          queryClient.invalidateQueries({ queryKey: profileKeys.all });
+          queryClient.invalidateQueries({ queryKey: profileKeys.all(userId) });
         }
       },
     });

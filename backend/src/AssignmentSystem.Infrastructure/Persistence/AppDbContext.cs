@@ -28,6 +28,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplyConfiguration(new AuthUserConfiguration());
+        modelBuilder.ApplyConfiguration(new StudentProfileConfiguration());
         modelBuilder.ApplyConfiguration(new GradeConfiguration());
         modelBuilder.ApplyConfiguration(new SectionConfiguration());
         modelBuilder.ApplyConfiguration(new SubjectConfiguration());

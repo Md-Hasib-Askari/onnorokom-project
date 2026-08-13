@@ -2,14 +2,15 @@
 
 import { ProfileQueries } from "@/lib/queries/profile.queries";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/workspace/error-state";
 import { ChangePasswordForm } from "./change-password-form";
 import { EditProfileForm } from "./edit-profile-form";
 
-export function ProfileView() {
-  const profileQuery = ProfileQueries.useGet();
+export function ProfileView({ userId }: { userId: string }) {
+  const profileQuery = ProfileQueries.useGet(userId);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
         <p className="text-sm text-muted-foreground">Manage your account details and password.</p>
@@ -18,10 +19,10 @@ export function ProfileView() {
       {profileQuery.isLoading ? (
         <ProfileSkeleton />
       ) : profileQuery.isError || !profileQuery.data ? (
-        <p className="text-sm text-destructive">Failed to load your profile.</p>
+        <ErrorState description="Failed to load your profile." retry={profileQuery.refetch} />
       ) : (
         <div className="space-y-6">
-          <EditProfileForm key={profileQuery.data.fullName} profile={profileQuery.data} />
+          <EditProfileForm key={profileQuery.data.id} profile={profileQuery.data} />
           <ChangePasswordForm />
         </div>
       )}

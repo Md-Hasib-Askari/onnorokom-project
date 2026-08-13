@@ -8,6 +8,6 @@ export const metadata: Metadata = {
 };
 
 export default async function ProfilePage() {
-  await requireSession();
-  return <ProfileView />;
+  const session = await requireSession();
+  return <ProfileView userId={session.userId} />;
 }

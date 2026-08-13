@@ -9,6 +9,12 @@ import {
   userRoleSchema,
 } from "./common.schema";
 import { passwordSchema } from "./auth.schema";
+export const genderSchema = z.enum(["Male", "Female", "Other"]);
+export type Gender = z.infer<typeof genderSchema>;
+/** Enum-style accessor (`Gender.Male`) so gender literals are written exactly once. */
+export const Gender = genderSchema.enum;
+export const GENDERS = genderSchema.options;
+
 
 // ---- GET /api/admin/users, GET /api/admin/users/pending ----
 
@@ -72,6 +78,17 @@ export type AdminCreateUserResponse = z.infer<typeof adminCreateUserResponseSche
 
 // ---- PUT /api/admin/users/:id ----
 
+export const studentProfileInputSchema = z.object({
+  rollNumber: z.string().trim().optional(),
+  dateOfBirth: z.string().optional(),
+  gender: genderSchema.optional(),
+  guardianName: z.string().trim().optional(),
+  guardianPhone: z.string().trim().optional(),
+  address: z.string().trim().optional(),
+  admissionDate: z.string().optional(),
+});
+export type StudentProfileInput = z.infer<typeof studentProfileInputSchema>;
+
 export const teacherProfileInputSchema = z.object({
   teacherCode: z.string().trim().optional(),
   department: z.string().trim().optional(),
@@ -119,3 +136,34 @@ export function adminUpdateUserSchemaFor(role: UserRole) {
 
 export const adminUpdateUserResponseSchema = adminUserSummarySchema;
 export type AdminUpdateUserResponse = z.infer<typeof adminUpdateUserResponseSchema>;
+
+export const studentProfileDetailSchema = z.object({
+  sectionId: z.string(),
+  sectionName: z.string().nullable(),
+  gradeName: z.string().nullable(),
+  rollNumber: z.string().nullable(),
+  dateOfBirth: z.string().nullable(),
+  gender: genderSchema.nullable(),
+  guardianName: z.string().nullable(),
+  guardianPhone: z.string().nullable(),
+  address: z.string().nullable(),
+  admissionDate: z.string().nullable(),
+});
+export type StudentProfileDetail = z.infer<typeof studentProfileDetailSchema>;
+
+export const teacherProfileDetailSchema = z.object({
+  teacherCode: z.string().nullable(),
+  department: z.string().nullable(),
+  designation: z.string().nullable(),
+  qualification: z.string().nullable(),
+  phoneNumber: z.string().nullable(),
+  address: z.string().nullable(),
+  dateOfJoining: z.string().nullable(),
+});
+export type TeacherProfileDetail = z.infer<typeof teacherProfileDetailSchema>;
+
+export const adminProfileDetailSchema = z.object({
+  position: z.string().nullable(),
+  phoneNumber: z.string().nullable(),
+});
+export type AdminProfileDetail = z.infer<typeof adminProfileDetailSchema>;

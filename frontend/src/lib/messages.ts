@@ -17,6 +17,7 @@ export const SELECT_PLACEHOLDERS = {
   sectionNeedsGrade: "Select a grade first",
   sectionNone: "This grade has no sections yet",
   sectionUnassigned: "No sections assigned to you yet",
+  gender: "Select gender",
   subject: "Select a subject",
   subjectNeedsSection: "Select a section first",
   subjectNone: "This section has no subjects yet",

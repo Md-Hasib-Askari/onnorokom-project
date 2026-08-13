@@ -18,7 +18,21 @@ export class ProfileApi {
   }
 
   static async update(accessToken: string, payload: UpdateProfileRequest): Promise<Profile> {
-    const { data } = await apiClient.put("/api/profile", payload, {
+    // `<input type="date">` submits "" when left blank, but the backend binds these fields to
+    // `DateTimeOffset?`, which fails to deserialize an empty string. Omit the key instead.
+    const sanitized: UpdateProfileRequest = {
+      ...payload,
+      studentProfile: payload.studentProfile && {
+        ...payload.studentProfile,
+        dateOfBirth: payload.studentProfile.dateOfBirth || undefined,
+        admissionDate: payload.studentProfile.admissionDate || undefined,
+      },
+      teacherProfile: payload.teacherProfile && {
+        ...payload.teacherProfile,
+        dateOfJoining: payload.teacherProfile.dateOfJoining || undefined,
+      },
+    };
+    const { data } = await apiClient.put("/api/profile", sanitized, {
       headers: authHeaders(accessToken),
     });
     return updateProfileResponseSchema.parse(data);

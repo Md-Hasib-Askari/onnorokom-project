@@ -4,14 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import { getProfileAction } from "@/lib/actions/profile.actions";
 
 export const profileKeys = {
-  all: ["profile"] as const,
+  all: (userId: string) => ["profile", userId] as const,
 };
 
 export const ProfileQueries = {
-  useGet() {
+  useGet(userId: string) {
     return useQuery({
-      queryKey: profileKeys.all,
+      queryKey: profileKeys.all(userId),
       queryFn: () => getProfileAction(),
+      enabled: !!userId,
     });
   },
 };
