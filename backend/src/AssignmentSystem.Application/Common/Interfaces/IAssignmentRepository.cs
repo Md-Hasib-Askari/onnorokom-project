@@ -22,10 +22,16 @@ public interface IAssignmentRepository
         CancellationToken ct = default);
 
     /// <summary>
-    /// The student-facing feed. Drafts are excluded at the query rather than filtered later, so a
-    /// caller cannot accidentally surface unpublished work by forgetting a check.
+    /// Keyset page of the student-facing feed ordered by <c>(CreatedAt, Id)</c> descending.
+    /// Drafts are excluded at the query rather than filtered later, so a caller cannot
+    /// accidentally surface unpublished work by forgetting a check.
     /// </summary>
-    Task<List<Assignment>> GetPublishedForSectionAsync(Guid sectionId, CancellationToken ct = default);
+    Task<PagedResult<Assignment>> GetPublishedPageForSectionAsync(
+        Guid sectionId,
+        int limit,
+        DateTimeOffset? afterCreatedAt,
+        Guid? afterId,
+        CancellationToken ct = default);
 
     Task<bool> HasSubmissionsAsync(Guid assignmentId, CancellationToken ct = default);
     Task AddAsync(Assignment assignment, CancellationToken ct = default);

@@ -5,6 +5,7 @@ using AssignmentSystem.Application.DTOs.Assignments;
 using AssignmentSystem.Application.DTOs.Student;
 using AssignmentSystem.Application.Services;
 using AssignmentSystem.Domain.Entities;
+using AssignmentSystem.Domain.Common;
 using AssignmentSystem.Domain.Enums;
 
 namespace AssignmentSystem.Tests;
@@ -53,9 +54,9 @@ public class StudentAssignmentServiceTests
         SeedAssignment(published: false);
         var published = SeedAssignment();
 
-        var list = await _sut.GetMyAssignmentsAsync();
+        var list = await _sut.GetMyAssignmentsAsync(new PageRequest(null), null);
 
-        Assert.Equal(published.Id, Assert.Single(list).Id);
+        Assert.Equal(published.Id, Assert.Single(list.Items).Id);
     }
 
     [Fact]
@@ -71,7 +72,7 @@ public class StudentAssignmentServiceTests
     {
         SeedAssignment(sectionId: Guid.NewGuid());
 
-        Assert.Empty(await _sut.GetMyAssignmentsAsync());
+        Assert.Empty((await _sut.GetMyAssignmentsAsync(new PageRequest(null), null)).Items);
     }
 
     [Fact]
@@ -90,7 +91,7 @@ public class StudentAssignmentServiceTests
         submission.Grade(90, "Good work.", Guid.NewGuid());
         _submissions.Items.Add(submission);
 
-        var item = Assert.Single(await _sut.GetMyAssignmentsAsync());
+        var item = Assert.Single((await _sut.GetMyAssignmentsAsync(new PageRequest(null), null)).Items);
 
         Assert.Equal(SubmissionStatus.Graded, item.SubmissionStatus);
         Assert.Equal(90m, item.Marks);
@@ -101,7 +102,7 @@ public class StudentAssignmentServiceTests
     {
         SeedAssignment();
 
-        var item = Assert.Single(await _sut.GetMyAssignmentsAsync());
+        var item = Assert.Single((await _sut.GetMyAssignmentsAsync(new PageRequest(null), null)).Items);
 
         Assert.Null(item.SubmissionStatus);
         Assert.False(item.IsLate);
@@ -112,8 +113,44 @@ public class StudentAssignmentServiceTests
     {
         _profiles.Students.Clear();
 
-        await Assert.ThrowsAsync<ForbiddenException>(() => _sut.GetMyAssignmentsAsync());
+        await Assert.ThrowsAsync<ForbiddenException>(() => _sut.GetMyAssignmentsAsync(new PageRequest(null), null));
     }
+
+    [Fact]
+    public async Task Submit_WhenTeacherHasClosedSubmissions_ThrowsDomainException()
+    {
+        var assignment = SeedAssignment();
+        assignment.CloseSubmissions();
+
+        await Assert.ThrowsAsync<DomainException>(() => _sut.SubmitAsync(assignment.Id, Answer()));
+        Assert.Empty(_submissions.Items);
+    }
+
+
+    [Fact]
+    public async Task GetMyAssignments_PagesNewestFirstAndWalksTheCursor()
+    {
+        // Distinct CreatedAt values so the descending keyset order is deterministic.
+        var newest = SeedAssignment();
+        var middle = SeedAssignment();
+        var oldest = SeedAssignment();
+        ((ICreatable)newest).CreatedAt = DateTimeOffset.UtcNow;
+        ((ICreatable)middle).CreatedAt = DateTimeOffset.UtcNow.AddHours(-1);
+        ((ICreatable)oldest).CreatedAt = DateTimeOffset.UtcNow.AddHours(-2);
+
+        var firstPage = await _sut.GetMyAssignmentsAsync(new PageRequest(2), null);
+
+        Assert.Equal([newest.Id, middle.Id], firstPage.Items.Select(a => a.Id).ToArray());
+        Assert.True(firstPage.HasMore);
+        Assert.NotNull(firstPage.NextCursor);
+
+        var secondPage = await _sut.GetMyAssignmentsAsync(new PageRequest(2), firstPage.NextCursor);
+
+        Assert.Equal([oldest.Id], secondPage.Items.Select(a => a.Id).ToArray());
+        Assert.False(secondPage.HasMore);
+        Assert.Null(secondPage.NextCursor);
+    }
+
 
     [Fact]
     public async Task Submit_BeforeTheDeadline_CreatesASubmittedRow()
@@ -280,10 +317,30 @@ public class StudentAssignmentServiceTests
         public Task<List<Assignment>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default)
             => Task.FromResult(Items.Where(a => a.TeacherId == teacherId).ToList());
 
-        public Task<List<Assignment>> GetPublishedForSectionAsync(Guid sectionId, CancellationToken ct = default)
-            => Task.FromResult(Items
+        public Task<PagedResult<Assignment>> GetPublishedPageForSectionAsync(
+            Guid sectionId,
+            int limit,
+            DateTimeOffset? afterCreatedAt,
+            Guid? afterId,
+            CancellationToken ct = default)
+        {
+            var ordered = Items
                 .Where(a => a.SectionId == sectionId && a.Status == AssignmentStatus.Published)
-                .ToList());
+                .OrderByDescending(a => a.CreatedAt)
+                .ThenByDescending(a => a.Id)
+                .ToList();
+
+            var rows = ordered
+                .Where(a => afterCreatedAt == null
+                    || a.CreatedAt < afterCreatedAt
+                    || (a.CreatedAt == afterCreatedAt && a.Id < afterId))
+                .Take(limit + 1)
+                .ToList();
+
+            return Task.FromResult(PagedResult<Assignment>.FromRows(
+                rows, limit, last => CursorCodec.Encode(last.CreatedAt, last.Id)));
+        }
+
 
         public Task<bool> HasSubmissionsAsync(Guid assignmentId, CancellationToken ct = default)
             => Task.FromResult(false);

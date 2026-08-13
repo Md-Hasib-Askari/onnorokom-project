@@ -1,4 +1,5 @@
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Student;
 using AssignmentSystem.Domain.Enums;
 using FluentValidation;
@@ -20,9 +21,12 @@ public class StudentAssignmentController(
     IValidator<SubmissionUpdateRequest> updateValidator) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetMine(CancellationToken ct)
+    public async Task<IActionResult> GetMine(
+        [FromQuery] int? limit,
+        [FromQuery] string? cursor,
+        CancellationToken ct)
     {
-        var assignments = await studentAssignmentService.GetMyAssignmentsAsync(ct);
+        var assignments = await studentAssignmentService.GetMyAssignmentsAsync(new PageRequest(limit), cursor, ct);
         return Ok(assignments);
     }
 

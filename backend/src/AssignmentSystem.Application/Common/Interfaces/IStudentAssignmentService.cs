@@ -1,10 +1,14 @@
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Student;
 
 namespace AssignmentSystem.Application.Common.Interfaces;
 
 public interface IStudentAssignmentService
 {
-    Task<List<StudentAssignmentListItemDto>> GetMyAssignmentsAsync(CancellationToken ct = default);
+    Task<PagedResult<StudentAssignmentListItemDto>> GetMyAssignmentsAsync(
+        PageRequest page,
+        string? cursor,
+        CancellationToken ct = default);
     Task<StudentAssignmentDetailDto> GetByIdAsync(Guid assignmentId, CancellationToken ct = default);
 
     Task<StudentAssignmentDetailDto> SubmitAsync(

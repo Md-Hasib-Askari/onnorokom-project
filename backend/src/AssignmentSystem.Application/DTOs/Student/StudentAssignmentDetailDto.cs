@@ -17,6 +17,7 @@ public record StudentAssignmentDetailDto(
     decimal MaxMarks,
     bool AllowLateSubmission,
     bool IsPastDeadline,
+    bool SubmissionsOpen,
     SubmissionStatus? SubmissionStatus,
     bool IsLate,
     decimal? Marks,

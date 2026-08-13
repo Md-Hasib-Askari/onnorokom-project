@@ -1,6 +1,7 @@
 using AssignmentSystem.Application.Common;
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Student;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
@@ -13,20 +14,29 @@ public class StudentAssignmentService(
     IProfileRepository profileRepository,
     ICurrentUser currentUser) : IStudentAssignmentService
 {
-    public async Task<List<StudentAssignmentListItemDto>> GetMyAssignmentsAsync(CancellationToken ct = default)
+    public async Task<PagedResult<StudentAssignmentListItemDto>> GetMyAssignmentsAsync(
+        PageRequest page,
+        string? cursor,
+        CancellationToken ct = default)
     {
         var studentId = currentUser.GetRequiredUserId();
         var profile = await LoadProfileAsync(studentId, ct);
 
-        var assignments = await assignmentRepository.GetPublishedForSectionAsync(profile.SectionId, ct);
+        DateTimeOffset? afterCreatedAt = null;
+        Guid? afterId = null;
+        if (cursor is not null)
+        {
+            (afterCreatedAt, afterId) = CursorCodec.DecodeTimestamp(cursor);
+        }
+        var assignments = await assignmentRepository.GetPublishedPageForSectionAsync(
+            profile.SectionId, page.Limit, afterCreatedAt, afterId, ct);
 
         var submissions = await submissionRepository.GetByStudentAndAssignmentIdsAsync(
-            studentId, assignments.Select(a => a.Id), ct);
+            studentId, assignments.Items.Select(a => a.Id), ct);
         var submissionByAssignmentId = submissions.ToDictionary(s => s.AssignmentId);
 
-        return assignments
-            .Select(a => ToListItem(a, submissionByAssignmentId.GetValueOrDefault(a.Id)))
-            .ToList();
+        return assignments.Map(
+            a => ToListItem(a, submissionByAssignmentId.GetValueOrDefault(a.Id)));
     }
 
     public async Task<StudentAssignmentDetailDto> GetByIdAsync(Guid assignmentId, CancellationToken ct = default)
@@ -72,8 +82,7 @@ public class StudentAssignmentService(
 
         if (!assignment.IsAcceptingSubmissions(DateTimeOffset.UtcNow))
         {
-            throw new DomainException(
-                "The deadline for this assignment has passed and late submissions are not allowed.");
+            throw new DomainException("Submissions are not currently being accepted for this assignment.");
         }
 
         var submission = await submissionRepository.GetByAssignmentAndStudentAsync(assignmentId, studentId, ct);
@@ -141,6 +150,7 @@ public class StudentAssignmentService(
         assignment.MaxMarks,
         assignment.AllowLateSubmission,
         assignment.IsPastDeadline(DateTimeOffset.UtcNow),
+        assignment.SubmissionsOpen,
         submission?.Status,
         IsLate(assignment, submission),
         submission?.Marks);
@@ -158,6 +168,7 @@ public class StudentAssignmentService(
             assignment.MaxMarks,
             assignment.AllowLateSubmission,
             assignment.IsPastDeadline(DateTimeOffset.UtcNow),
+            assignment.SubmissionsOpen,
             submission?.Status,
             IsLate(assignment, submission),
             submission?.Marks,

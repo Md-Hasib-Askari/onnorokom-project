@@ -202,10 +202,14 @@ public class TeacherSubmissionServiceTests
             => Task.FromResult(PagedResult<Assignment>.FromAll(
                 Items.Where(a => a.TeacherId == teacherId).ToList()));
 
-        public Task<List<Assignment>> GetPublishedForSectionAsync(Guid sectionId, CancellationToken ct = default)
-            => Task.FromResult(Items
-                .Where(a => a.SectionId == sectionId && a.Status == AssignmentStatus.Published)
-                .ToList());
+        public Task<PagedResult<Assignment>> GetPublishedPageForSectionAsync(
+            Guid sectionId,
+            int limit,
+            DateTimeOffset? afterCreatedAt,
+            Guid? afterId,
+            CancellationToken ct = default)
+            => Task.FromResult(PagedResult<Assignment>.FromAll(
+                Items.Where(a => a.SectionId == sectionId && a.Status == AssignmentStatus.Published).ToList()));
 
         public Task<bool> HasSubmissionsAsync(Guid assignmentId, CancellationToken ct = default)
             => Task.FromResult(false);

@@ -41,12 +41,19 @@ public class AssignmentRepository(AppDbContext dbContext) : IAssignmentRepositor
         return PagedResult<Assignment>.FromRows(rows, limit, last => CursorCodec.Encode(last.CreatedAt, last.Id));
     }
 
-    public async Task<List<Assignment>> GetPublishedForSectionAsync(Guid sectionId, CancellationToken ct = default)
+    public async Task<PagedResult<Assignment>> GetPublishedPageForSectionAsync(
+        Guid sectionId,
+        int limit,
+        DateTimeOffset? afterCreatedAt,
+        Guid? afterId,
+        CancellationToken ct = default)
     {
-        return await WithDetails()
+        var rows = await WithDetails()
             .Where(a => a.SectionId == sectionId && a.Status == AssignmentStatus.Published)
-            .OrderByDescending(a => a.CreatedAt)
+            .ApplyKeysetPaging(a => a.CreatedAt, afterCreatedAt, afterId, descending: true, limit)
             .ToListAsync(ct);
+
+        return PagedResult<Assignment>.FromRows(rows, limit, last => CursorCodec.Encode(last.CreatedAt, last.Id));
     }
 
     public async Task<bool> HasSubmissionsAsync(Guid assignmentId, CancellationToken ct = default)
