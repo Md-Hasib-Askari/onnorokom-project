@@ -1,4 +1,5 @@
 using AssignmentSystem.Application.Common.Exceptions;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.Services;
 using AssignmentSystem.Domain.Entities;
@@ -264,6 +265,15 @@ public class SectionSubjectServiceTests
 
         public Task<List<AuthUser>> GetAllAsync(CancellationToken ct = default)
             => Task.FromResult(Users.ToList());
+
+        public Task<PagedResult<AuthUser>> GetPageAsync(
+            int limit,
+            DateTimeOffset? afterCreatedAt,
+            Guid? afterId,
+            AccountStatus? status,
+            UserRole? role,
+            CancellationToken ct = default)
+            => Task.FromResult(PagedResult<AuthUser>.FromAll([]));
 
         public Task<bool> HasAssignedSubjectsAsync(Guid userId, CancellationToken ct = default)
             => Task.FromResult(false);

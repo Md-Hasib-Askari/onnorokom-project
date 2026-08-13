@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { AdminUsersApi } from "@/lib/api/admin-users.api";
+import { AdminUsersApi, type AdminUserListParams } from "@/lib/api/admin-users.api";
 import { AdminGradesApi } from "@/lib/api/admin-grades.api";
 import { ApiError } from "@/lib/api/client";
 import { HttpStatus } from "@/lib/api/http-status";
@@ -35,21 +35,21 @@ function redirectOnSessionExpired(error: unknown): never {
   throw error;
 }
 
-export async function listUsersAction() {
+export async function listUsersAction(params: AdminUserListParams = {}) {
   await requireRole(UserRole.Admin);
   try {
     const token = await accessTokenOrThrow();
-    return await AdminUsersApi.list(token);
+    return await AdminUsersApi.list(token, params);
   } catch (error) {
     redirectOnSessionExpired(error);
   }
 }
 
-export async function listPendingUsersAction() {
+export async function getUserDetailAction(id: string) {
   await requireRole(UserRole.Admin);
   try {
     const token = await accessTokenOrThrow();
-    return await AdminUsersApi.listPending(token);
+    return await AdminUsersApi.getById(token, id);
   } catch (error) {
     redirectOnSessionExpired(error);
   }

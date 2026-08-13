@@ -1,5 +1,6 @@
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -29,11 +30,30 @@ public class AuthUserRepository(AppDbContext dbContext) : IUserRepository
         return await dbContext.AuthUsers.AnyAsync(u => u.Email == email, ct);
     }
 
-    public async Task<List<AuthUser>> GetAllAsync(CancellationToken ct = default)
+    public async Task<PagedResult<AuthUser>> GetPageAsync(
+        int limit,
+        DateTimeOffset? afterCreatedAt,
+        Guid? afterId,
+        AccountStatus? status,
+        UserRole? role,
+        CancellationToken ct = default)
     {
-        return await dbContext.AuthUsers
-            .OrderBy(u => u.CreatedAt)
+        var query = dbContext.AuthUsers.AsQueryable();
+        if (status is not null)
+        {
+            query = query.Where(u => u.Status == status);
+        }
+
+        if (role is not null)
+        {
+            query = query.Where(u => u.Role == role);
+        }
+
+        var rows = await query
+            .ApplyKeysetPaging(u => u.CreatedAt, afterCreatedAt, afterId, descending: false, limit)
             .ToListAsync(ct);
+
+        return PagedResult<AuthUser>.FromRows(rows, limit, last => CursorCodec.Encode(last.CreatedAt, last.Id));
     }
 
     public async Task<bool> HasAssignedSubjectsAsync(Guid userId, CancellationToken ct = default)
@@ -61,6 +81,7 @@ public class AuthUserRepository(AppDbContext dbContext) : IUserRepository
         return dbContext.AuthUsers.CountAsync(
             u => u.Role == UserRole.Admin && u.Status == AccountStatus.Approved && u.IsActive, ct);
     }
+
 
     public async Task AddAsync(AuthUser user, CancellationToken ct = default)
     {

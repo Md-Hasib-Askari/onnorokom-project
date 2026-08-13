@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import type { SectionSummary } from "@/lib/api/schemas/sections.schema";
 import { isEligibleTeacher } from "@/lib/eligible-teacher";
+import { UserRole } from "@/lib/api/schemas/common.schema";
 import { ERROR_MESSAGES } from "@/lib/messages";
 import { AdminSectionMutations } from "@/lib/mutations/admin-sections.mutations";
 import { AdminSectionQueries } from "@/lib/queries/admin-sections.queries";
@@ -24,9 +25,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ErrorState } from "@/components/workspace/error-state";
 
 /** Radix `SelectItem` rejects an empty-string value, so the "no teacher yet" option uses this sentinel. */
 const NO_TEACHER_VALUE = "none";
+
+/** The picker only ever needs teachers, so it fetches them server-side instead of the whole users list. */
+const TEACHER_PICKER_LIMIT = 100;
 
 interface SectionSubjectsDialogProps {
   section: SectionSummary | null;
@@ -35,11 +40,13 @@ interface SectionSubjectsDialogProps {
 
 export function SectionSubjectsDialog({ section, onOpenChange }: SectionSubjectsDialogProps) {
   const subjectsQuery = AdminSectionQueries.useSectionSubjects(section?.id);
-  const usersQuery = AdminUserQueries.useList();
+  const usersQuery = AdminUserQueries.useList({ role: UserRole.Teacher, limit: TEACHER_PICKER_LIMIT });
   const assignMutation = AdminSectionMutations.useAssignSubjectTeacher();
   const unassignMutation = AdminSectionMutations.useUnassignSubjectTeacher();
 
-  const eligibleTeachers = (usersQuery.data ?? []).filter(isEligibleTeacher);
+  const eligibleTeachers = (usersQuery.data?.pages.flatMap((page) => page.items) ?? []).filter(
+    isEligibleTeacher
+  );
 
   function handleTeacherChange(subjectId: string, subjectName: string, value: string) {
     if (!section) return;
@@ -86,7 +93,7 @@ export function SectionSubjectsDialog({ section, onOpenChange }: SectionSubjects
         {subjectsQuery.isLoading ? (
           <SubjectsSkeleton />
         ) : subjectsQuery.isError ? (
-          <p className="text-sm text-destructive">Failed to load subjects.</p>
+          <ErrorState compact description="Failed to load subjects." retry={subjectsQuery.refetch} />
         ) : subjectsQuery.data && subjectsQuery.data.length === 0 ? (
           <p className="text-sm text-muted-foreground">This grade has no subjects yet.</p>
         ) : (

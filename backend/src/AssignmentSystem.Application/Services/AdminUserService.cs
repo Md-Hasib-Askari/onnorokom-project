@@ -1,8 +1,10 @@
 using AssignmentSystem.Application.Common;
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Admin;
 using AssignmentSystem.Application.DTOs.Auth;
+using AssignmentSystem.Application.DTOs.Profile;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
 
@@ -18,16 +20,47 @@ public class AdminUserService(
     IProfileProvisioningService profileProvisioningService,
     IEmailSender emailSender) : IAdminUserService
 {
-    public async Task<List<UserListItemDto>> GetAllUsersAsync(CancellationToken ct = default)
+    public async Task<PagedResult<UserListItemDto>> GetAllUsersAsync(
+        PageRequest page,
+        string? cursor,
+        AccountStatus? status,
+        UserRole? role,
+        CancellationToken ct = default)
     {
-        var users = await userRepository.GetAllAsync(ct);
-        return await UserListItemDtoFactory.BuildAsync(users, profileRepository, sectionRepository, ct);
+        var (afterCreatedAt, afterId) = cursor is null
+            ? (afterCreatedAt: (DateTimeOffset?)null, afterId: (Guid?)null)
+            : CursorCodec.DecodeTimestamp(cursor);
+
+        var users = await userRepository.GetPageAsync(page.Limit, afterCreatedAt, afterId, status, role, ct);
+        var items = await UserListItemDtoFactory.BuildAsync(users.Items, profileRepository, sectionRepository, ct);
+        return new PagedResult<UserListItemDto>(items, users.NextCursor, users.HasMore);
     }
 
     private async Task<UserListItemDto> BuildDtoAsync(AuthUser user, CancellationToken ct)
     {
         var dtos = await UserListItemDtoFactory.BuildAsync([user], profileRepository, sectionRepository, ct);
         return dtos[0];
+    }
+
+    public async Task<UserDetailDto> GetUserByIdAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await userRepository.GetByIdAsync(userId, ct)
+            ?? throw new EntityNotFoundException($"User with id {userId} was not found.");
+
+        var (studentProfile, teacherProfile, adminProfile) =
+            await ProfileDetailDtoFactory.BuildAsync(user, profileRepository, sectionRepository, ct);
+
+        return new UserDetailDto(
+            user.Id,
+            user.FullName,
+            user.Email,
+            user.Role,
+            user.Status,
+            user.CreatedAt,
+            user.IsActive,
+            studentProfile,
+            teacherProfile,
+            adminProfile);
     }
 
     public async Task<UserListItemDto> CreateUserAsync(UserCreateRequest request, CancellationToken ct = default)
@@ -156,7 +189,7 @@ public class AdminUserService(
                 await UpdateTeacherProfileAsync(user, request.TeacherProfile, ct);
                 break;
             case UserRole.Student:
-                await UpdateStudentProfileAsync(user, request.StudentSectionId, ct);
+                await UpdateStudentProfileAsync(user, request.StudentSectionId, request.StudentProfile, ct);
                 break;
             case UserRole.Admin:
                 await UpdateAdminProfileAsync(user, request.AdminProfile, ct);
@@ -164,16 +197,33 @@ public class AdminUserService(
         }
     }
 
-    private async Task UpdateStudentProfileAsync(AuthUser user, Guid? studentSectionId, CancellationToken ct)
+    private async Task UpdateStudentProfileAsync(AuthUser user, Guid? studentSectionId, StudentProfileUpdateRequest? request, CancellationToken ct)
     {
         var studentProfile = await profileRepository.GetStudentByUserIdAsync(user.Id, ct);
         if (studentProfile is null)
         {
-            await profileRepository.AddAsync(StudentProfile.Create(user.Id, studentSectionId!.Value), ct);
+            var newProfile = StudentProfile.Create(user.Id, studentSectionId!.Value);
+            newProfile.UpdateDetails(
+                request?.RollNumber,
+                request?.DateOfBirth,
+                request?.Gender,
+                request?.GuardianName,
+                request?.GuardianPhone,
+                request?.Address,
+                request?.AdmissionDate);
+            await profileRepository.AddAsync(newProfile, ct);
         }
         else
         {
             studentProfile.ChangeSection(studentSectionId!.Value);
+            studentProfile.UpdateDetails(
+                request?.RollNumber,
+                request?.DateOfBirth,
+                request?.Gender,
+                request?.GuardianName,
+                request?.GuardianPhone,
+                request?.Address,
+                request?.AdmissionDate);
             await profileRepository.UpdateAsync(studentProfile, ct);
         }
     }

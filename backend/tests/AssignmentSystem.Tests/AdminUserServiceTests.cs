@@ -1,5 +1,6 @@
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Admin;
 using AssignmentSystem.Application.Services;
 using AssignmentSystem.Domain.Entities;
@@ -567,9 +568,9 @@ public class AdminUserServiceTests
         _users.Users.Add(AuthUser.CreatePending("One", "one@test.com", "hash", UserRole.Student));
         _users.Users.Add(AuthUser.CreatePending("Two", "two@test.com", "hash", UserRole.Teacher));
 
-        var users = await _sut.GetAllUsersAsync();
+        var users = await _sut.GetAllUsersAsync(new PageRequest(null), null, null, null);
 
-        Assert.Equal(2, users.Count);
+        Assert.Equal(2, users.Items.Count);
     }
 
     [Fact]
@@ -586,21 +587,70 @@ public class AdminUserServiceTests
         teacher.Deactivate();
         _users.Users.Add(teacher);
 
-        var users = await _sut.GetAllUsersAsync();
+        var users = await _sut.GetAllUsersAsync(new PageRequest(null), null, null, null);
 
-        var studentDto = users.Single(u => u.Id == student.Id);
+        var studentDto = users.Items.Single(u => u.Id == student.Id);
         Assert.True(studentDto.IsActive);
         Assert.Equal(section.Id, studentDto.StudentSectionId);
         Assert.Equal("Section A", studentDto.SectionName);
 
-        var teacherDto = users.Single(u => u.Id == teacher.Id);
+        var teacherDto = users.Items.Single(u => u.Id == teacher.Id);
         Assert.False(teacherDto.IsActive);
         Assert.Null(teacherDto.StudentSectionId);
         Assert.Null(teacherDto.SectionName);
     }
 
+    [Fact]
+    public async Task GetAllUsers_StatusFilter_ReturnsOnlyMatching()
+    {
+        _users.Users.Add(AuthUser.CreatePending("Pending", "pending@test.com", "hash", UserRole.Student));
+        var approved = AuthUser.CreatePending("Approved", "approved@test.com", "hash", UserRole.Student);
+        approved.Approve();
+        _users.Users.Add(approved);
+
+        var users = await _sut.GetAllUsersAsync(new PageRequest(null), null, AccountStatus.Pending, null);
+
+        Assert.Single(users.Items);
+        Assert.Equal("pending@test.com", users.Items[0].Email);
+    }
+
+    [Fact]
+    public async Task GetAllUsers_RoleFilter_ReturnsOnlyMatching()
+    {
+        _users.Users.Add(AuthUser.CreatePending("Teacher", "teacher@test.com", "hash", UserRole.Teacher));
+        _users.Users.Add(AuthUser.CreatePending("Student", "student@test.com", "hash", UserRole.Student));
+
+        var users = await _sut.GetAllUsersAsync(new PageRequest(null), null, null, UserRole.Teacher);
+
+        Assert.Single(users.Items);
+        Assert.Equal("teacher@test.com", users.Items[0].Email);
+    }
+
+    [Fact]
+    public async Task GetAllUsers_LimitCappedAndHasMore_ReportsNextCursor()
+    {
+        for (var i = 0; i < 25; i++)
+        {
+            _users.Users.Add(AuthUser.CreatePending($"User {i}", $"user{i}@test.com", "hash", UserRole.Student));
+        }
+
+        var first = await _sut.GetAllUsersAsync(new PageRequest(20), null, null, null);
+        Assert.Equal(20, first.Items.Count);
+        Assert.True(first.HasMore);
+        Assert.NotNull(first.NextCursor);
+
+        var second = await _sut.GetAllUsersAsync(new PageRequest(20), first.NextCursor, null, null);
+        Assert.Equal(5, second.Items.Count);
+        Assert.False(second.HasMore);
+        Assert.Null(second.NextCursor);
+
+        Assert.Empty(first.Items.Select(u => u.Id).Intersect(second.Items.Select(u => u.Id)));
+    }
+
     private sealed class FakeUserRepository : IUserRepository
     {
+
+
         public List<AuthUser> Users { get; } = new();
         public List<Guid> AssignedSubjectUserIds { get; } = new();
         public List<Guid> AssignmentUserIds { get; } = new();
@@ -619,11 +669,37 @@ public class AdminUserServiceTests
         public Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default)
             => Task.FromResult(Users.Any(u => u.Email == email));
 
-        public Task<List<AuthUser>> GetByStatusAsync(AccountStatus status, CancellationToken ct = default)
-            => Task.FromResult(Users.Where(u => u.Status == status).ToList());
+        public Task<PagedResult<AuthUser>> GetPageAsync(
+            int limit,
+            DateTimeOffset? afterCreatedAt,
+            Guid? afterId,
+            AccountStatus? status,
+            UserRole? role,
+            CancellationToken ct = default)
+        {
+            var query = Users.AsEnumerable();
+            if (status is not null)
+            {
+                query = query.Where(u => u.Status == status);
+            }
 
-        public Task<List<AuthUser>> GetAllAsync(CancellationToken ct = default)
-            => Task.FromResult(Users.ToList());
+            if (role is not null)
+            {
+                query = query.Where(u => u.Role == role);
+            }
+
+            var ordered = query.OrderBy(u => u.CreatedAt).ThenBy(u => u.Id).ToList();
+            if (afterCreatedAt is not null && afterId is not null)
+            {
+                ordered = ordered
+                    .Where(u => u.CreatedAt > afterCreatedAt || (u.CreatedAt == afterCreatedAt && u.Id > afterId))
+                    .ToList();
+            }
+
+            var rows = ordered.Take(limit + 1).ToList();
+            return Task.FromResult(
+                PagedResult<AuthUser>.FromRows(rows, limit, last => CursorCodec.Encode(last.CreatedAt, last.Id)));
+        }
 
         public Task<bool> HasAssignedSubjectsAsync(Guid userId, CancellationToken ct = default)
             => Task.FromResult(AssignedSubjectUserIds.Contains(userId));
@@ -652,6 +728,7 @@ public class AdminUserServiceTests
 
     private sealed class FakeProfileRepository : IProfileRepository
     {
+
         public List<TeacherProfile> TeacherProfiles { get; } = new();
         public List<StudentProfile> StudentProfiles { get; } = new();
         public List<AdminProfile> AdminProfiles { get; } = new();

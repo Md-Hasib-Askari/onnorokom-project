@@ -1,12 +1,13 @@
-using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common;
+using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
-using Microsoft.Extensions.Options;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Auth;
 using AssignmentSystem.Application.DTOs.Settings;
 using AssignmentSystem.Application.Services;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
+using Microsoft.Extensions.Options;
 
 namespace AssignmentSystem.Tests;
 
@@ -441,6 +442,7 @@ public class AuthServiceTests
 
     private sealed class FakeUserRepository : IUserRepository
     {
+
         public List<AuthUser> Users { get; } = [];
 
         public Task<AuthUser?> GetByIdAsync(Guid id, CancellationToken ct = default)
@@ -456,11 +458,37 @@ public class AuthServiceTests
         public Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default)
             => Task.FromResult(Users.Any(u => u.Email == email));
 
-        public Task<List<AuthUser>> GetByStatusAsync(AccountStatus status, CancellationToken ct = default)
-            => Task.FromResult(Users.Where(u => u.Status == status).ToList());
+        public Task<PagedResult<AuthUser>> GetPageAsync(
+            int limit,
+            DateTimeOffset? afterCreatedAt,
+            Guid? afterId,
+            AccountStatus? status,
+            UserRole? role,
+            CancellationToken ct = default)
+        {
+            var query = Users.AsEnumerable();
+            if (status is not null)
+            {
+                query = query.Where(u => u.Status == status);
+            }
 
-        public Task<List<AuthUser>> GetAllAsync(CancellationToken ct = default)
-            => Task.FromResult(Users.ToList());
+            if (role is not null)
+            {
+                query = query.Where(u => u.Role == role);
+            }
+
+            var ordered = query.OrderBy(u => u.CreatedAt).ThenBy(u => u.Id).ToList();
+            if (afterCreatedAt is not null && afterId is not null)
+            {
+                ordered = ordered
+                    .Where(u => u.CreatedAt > afterCreatedAt || (u.CreatedAt == afterCreatedAt && u.Id > afterId))
+                    .ToList();
+            }
+
+            var rows = ordered.Take(limit + 1).ToList();
+            return Task.FromResult(
+                PagedResult<AuthUser>.FromRows(rows, limit, last => CursorCodec.Encode(last.CreatedAt, last.Id)));
+        }
 
         public Task<bool> HasAssignedSubjectsAsync(Guid userId, CancellationToken ct = default)
             => Task.FromResult(false);
@@ -489,6 +517,12 @@ public class AuthServiceTests
 
     private sealed class FakeProfileRepository : IProfileRepository
     {
+
+        public Task<int> CountStudentsBySectionIdsAsync(IEnumerable<Guid> sectionIds, CancellationToken ct = default)
+        {
+            var ids = sectionIds.ToHashSet();
+            return Task.FromResult(StudentProfiles.Count(p => ids.Contains(p.SectionId)));
+        }
         public List<TeacherProfile> TeacherProfiles { get; } = new();
         public List<StudentProfile> StudentProfiles { get; } = new();
         public List<AdminProfile> AdminProfiles { get; } = new();
@@ -498,6 +532,16 @@ public class AuthServiceTests
 
         public Task<List<StudentProfile>> GetStudentsByUserIdsAsync(IEnumerable<Guid> authUserIds, CancellationToken ct = default)
             => Task.FromResult(StudentProfiles.Where(p => authUserIds.Contains(p.AuthUserId)).ToList());
+
+        public Task<PagedResult<StudentProfile>> GetStudentsPageBySectionIdsAsync(
+            IEnumerable<Guid> sectionIds,
+            int limit,
+            string? afterSectionName,
+            string? afterFullName,
+            Guid? afterId,
+            CancellationToken ct = default)
+            => Task.FromResult(PagedResult<StudentProfile>.FromAll(
+                StudentProfiles.Where(p => sectionIds.Contains(p.SectionId)).ToList()));
 
         public Task<TeacherProfile?> GetTeacherByUserIdAsync(Guid authUserId, CancellationToken ct = default)
             => Task.FromResult(TeacherProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));
@@ -598,18 +642,29 @@ public class AuthServiceTests
     {
         public bool TeacherSelfRegistrationEnabled { get; set; } = true;
         public bool StudentSelfRegistrationEnabled { get; set; } = true;
+        public bool TeacherProfileSelfEditEnabled { get; set; } = true;
+        public bool StudentProfileSelfEditEnabled { get; set; } = true;
+
+        public Task<SystemSettingsDto> GetSystemSettingsAsync(CancellationToken ct = default)
+            => Task.FromResult(new SystemSettingsDto(
+                TeacherSelfRegistrationEnabled,
+                StudentSelfRegistrationEnabled,
+                TeacherProfileSelfEditEnabled,
+                StudentProfileSelfEditEnabled));
+
+        public Task<SystemSettingsDto> UpdateSystemSettingsAsync(
+            SystemSettingsUpdateRequest request, CancellationToken ct = default)
+        {
+            TeacherSelfRegistrationEnabled = request.TeacherSelfRegistrationEnabled;
+            StudentSelfRegistrationEnabled = request.StudentSelfRegistrationEnabled;
+            TeacherProfileSelfEditEnabled = request.TeacherProfileSelfEditEnabled;
+            StudentProfileSelfEditEnabled = request.StudentProfileSelfEditEnabled;
+            return GetSystemSettingsAsync(ct);
+        }
 
         public Task<RegistrationPolicyDto> GetRegistrationPolicyAsync(CancellationToken ct = default)
             => Task.FromResult(new RegistrationPolicyDto(
                 TeacherSelfRegistrationEnabled, StudentSelfRegistrationEnabled));
-
-        public Task<RegistrationPolicyDto> UpdateRegistrationPolicyAsync(
-            RegistrationPolicyUpdateRequest request, CancellationToken ct = default)
-        {
-            TeacherSelfRegistrationEnabled = request.TeacherSelfRegistrationEnabled;
-            StudentSelfRegistrationEnabled = request.StudentSelfRegistrationEnabled;
-            return GetRegistrationPolicyAsync(ct);
-        }
 
         public Task EnsureSelfRegistrationAllowedAsync(UserRole role, CancellationToken ct = default)
         {
@@ -621,6 +676,27 @@ public class AuthServiceTests
             };
 
             return allowed ? Task.CompletedTask : throw new RegistrationDisabledException(role);
+        }
+
+        public Task<ProfileEditPolicyDto> GetProfileEditPolicyAsync(CancellationToken ct = default)
+            => Task.FromResult(new ProfileEditPolicyDto(
+                TeacherProfileSelfEditEnabled, StudentProfileSelfEditEnabled));
+
+        public Task EnsureProfileEditAllowedAsync(UserRole role, CancellationToken ct = default)
+        {
+            if (role == UserRole.Admin)
+            {
+                return Task.CompletedTask;
+            }
+
+            var allowed = role switch
+            {
+                UserRole.Teacher => TeacherProfileSelfEditEnabled,
+                UserRole.Student => StudentProfileSelfEditEnabled,
+                _ => false
+            };
+
+            return allowed ? Task.CompletedTask : throw new ProfileEditDisabledException(role);
         }
     }
 

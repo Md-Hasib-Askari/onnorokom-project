@@ -3,27 +3,41 @@ import {
   adminUserListResponseSchema,
   adminUserSummarySchema,
   approveUserResponseSchema,
+  userDetailSchema,
   type AdminCreateUserRequest,
   type AdminUpdateUserRequest,
   type AdminUserSummary,
   type ApproveUserRequest,
   type ApproveUserResponse,
+  type UserDetail,
 } from "./schemas/admin-users.schema";
+import type { CursorPage } from "./schemas/common.schema";
+
+export interface AdminUserListParams {
+  limit?: number;
+  cursor?: string;
+  status?: string;
+  role?: string;
+}
 
 /** `/api/admin/users/*`, requires an Admin access token. */
 export class AdminUsersApi {
-  static async list(accessToken: string): Promise<AdminUserSummary[]> {
+  static async list(
+    accessToken: string,
+    params: AdminUserListParams = {}
+  ): Promise<CursorPage<AdminUserSummary>> {
     const { data } = await apiClient.get("/api/admin/users", {
       headers: authHeaders(accessToken),
+      params,
     });
     return adminUserListResponseSchema.parse(data);
   }
 
-  static async listPending(accessToken: string): Promise<AdminUserSummary[]> {
-    const { data } = await apiClient.get("/api/admin/users/pending", {
+  static async getById(accessToken: string, id: string): Promise<UserDetail> {
+    const { data } = await apiClient.get(`/api/admin/users/${id}`, {
       headers: authHeaders(accessToken),
     });
-    return adminUserListResponseSchema.parse(data);
+    return userDetailSchema.parse(data);
   }
 
   static async approve(
@@ -51,7 +65,21 @@ export class AdminUsersApi {
     id: string,
     payload: AdminUpdateUserRequest
   ): Promise<AdminUserSummary> {
-    const { data } = await apiClient.put(`/api/admin/users/${id}`, payload, {
+    // `<input type="date">` submits "" when left blank, but the backend binds these fields to
+    // `DateTimeOffset?`, which fails to deserialize an empty string. Omit the key instead.
+    const sanitized: AdminUpdateUserRequest = {
+      ...payload,
+      studentProfile: payload.studentProfile && {
+        ...payload.studentProfile,
+        dateOfBirth: payload.studentProfile.dateOfBirth || undefined,
+        admissionDate: payload.studentProfile.admissionDate || undefined,
+      },
+      teacherProfile: payload.teacherProfile && {
+        ...payload.teacherProfile,
+        dateOfJoining: payload.teacherProfile.dateOfJoining || undefined,
+      },
+    };
+    const { data } = await apiClient.put(`/api/admin/users/${id}`, sanitized, {
       headers: authHeaders(accessToken),
     });
     return adminUserSummarySchema.parse(data);

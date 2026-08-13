@@ -8,5 +8,6 @@ public record UserUpdateRequest(
     AccountStatus Status,
     bool IsActive,
     Guid? StudentSectionId = null,
+    StudentProfileUpdateRequest? StudentProfile = null,
     TeacherProfileUpdateRequest? TeacherProfile = null,
     AdminProfileUpdateRequest? AdminProfile = null);

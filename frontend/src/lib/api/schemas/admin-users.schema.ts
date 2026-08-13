@@ -3,18 +3,19 @@ import { VALIDATION_MESSAGES } from "@/lib/messages";
 import {
   AccountStatus,
   accountStatusSchema,
+  cursorPageSchema,
   emailSchema,
   fullNameSchema,
   UserRole,
   userRoleSchema,
 } from "./common.schema";
 import { passwordSchema } from "./auth.schema";
+
 export const genderSchema = z.enum(["Male", "Female", "Other"]);
 export type Gender = z.infer<typeof genderSchema>;
 /** Enum-style accessor (`Gender.Male`) so gender literals are written exactly once. */
 export const Gender = genderSchema.enum;
 export const GENDERS = genderSchema.options;
-
 
 // ---- GET /api/admin/users, GET /api/admin/users/pending ----
 
@@ -30,10 +31,17 @@ export const adminUserSummarySchema = z.object({
   sectionName: z.string().nullable(),
   gradeName: z.string().nullable(),
   teacherCode: z.string().nullable(),
+  rollNumber: z.string().nullable(),
+  dateOfBirth: z.string().nullable(),
+  gender: genderSchema.nullable(),
+  guardianName: z.string().nullable(),
+  guardianPhone: z.string().nullable(),
+  address: z.string().nullable(),
+  admissionDate: z.string().nullable(),
 });
 export type AdminUserSummary = z.infer<typeof adminUserSummarySchema>;
 
-export const adminUserListResponseSchema = z.array(adminUserSummarySchema);
+export const adminUserListResponseSchema = cursorPageSchema(adminUserSummarySchema);
 
 // ---- POST /api/admin/users/approve ----
 
@@ -120,6 +128,7 @@ export const adminUpdateUserRequestSchema = z.object({
   status: editableAccountStatusSchema,
   isActive: z.boolean(),
   studentSectionId: z.uuid().optional(),
+  studentProfile: studentProfileInputSchema.optional(),
   teacherProfile: teacherProfileInputSchema.optional(),
   adminProfile: adminProfileInputSchema.optional(),
 });
@@ -136,6 +145,8 @@ export function adminUpdateUserSchemaFor(role: UserRole) {
 
 export const adminUpdateUserResponseSchema = adminUserSummarySchema;
 export type AdminUpdateUserResponse = z.infer<typeof adminUpdateUserResponseSchema>;
+
+// ---- GET /api/admin/users/:id ----
 
 export const studentProfileDetailSchema = z.object({
   sectionId: z.string(),
@@ -167,3 +178,17 @@ export const adminProfileDetailSchema = z.object({
   phoneNumber: z.string().nullable(),
 });
 export type AdminProfileDetail = z.infer<typeof adminProfileDetailSchema>;
+
+export const userDetailSchema = z.object({
+  id: z.string(),
+  fullName: z.string(),
+  email: z.string(),
+  role: userRoleSchema,
+  status: accountStatusSchema,
+  createdAt: z.string(),
+  isActive: z.boolean(),
+  studentProfile: studentProfileDetailSchema.nullable(),
+  teacherProfile: teacherProfileDetailSchema.nullable(),
+  adminProfile: adminProfileDetailSchema.nullable(),
+});
+export type UserDetail = z.infer<typeof userDetailSchema>;

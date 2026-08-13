@@ -9,15 +9,17 @@ import { ERROR_MESSAGES } from "@/lib/messages";
 import { AdminUserQueries } from "@/lib/queries/admin-users.queries";
 import { AdminUserMutations } from "@/lib/mutations/admin-users.mutations";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/workspace/data-table";
+import { ErrorState } from "@/components/workspace/error-state";
+import { LoadMoreButton } from "@/components/workspace/load-more-button";
 import { buildUserColumns } from "./user-columns";
 import { buildPendingColumns } from "./pending-columns";
 import { buildRejectedColumns } from "./rejected-columns";
 import { ApproveStudentDialog } from "./approve-student-dialog";
 import { CreateUserDialog } from "./create-user-dialog";
 import { EditUserDialog } from "./edit-user-dialog";
+import { UserDetailDialog } from "./user-detail-dialog";
 import { DeleteUserDialog } from "./delete-user-dialog";
 import { ResetPasswordDialog } from "./reset-password-dialog";
 
@@ -37,15 +39,21 @@ interface UsersViewProps {
 
 export function UsersView({ currentUserId }: UsersViewProps) {
   const usersQuery = AdminUserQueries.useList();
-  const pendingQuery = AdminUserQueries.usePending();
+  const pendingQuery = AdminUserQueries.useList({ status: AccountStatus.Pending });
+  const rejectedQuery = AdminUserQueries.useList({ status: AccountStatus.Rejected });
   const approveMutation = AdminUserMutations.useApprove();
   const deleteMutation = AdminUserMutations.useDelete();
   const resetPasswordMutation = AdminUserMutations.useResetPassword();
 
+  const [viewingUser, setViewingUser] = useState<AdminUserSummary | null>(null);
   const [editingUser, setEditingUser] = useState<AdminUserSummary | null>(null);
   const [deletingUser, setDeletingUser] = useState<AdminUserSummary | null>(null);
   const [approvingStudent, setApprovingStudent] = useState<AdminUserSummary | null>(null);
   const [resettingUser, setResettingUser] = useState<AdminUserSummary | null>(null);
+
+  const users = usersQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const pendingUsers = pendingQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const rejectedUsers = rejectedQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   function handleApprove(user: AdminUserSummary, approve: boolean) {
     // A self-registered student has no section yet, so approving one is also an enrolment decision.
@@ -70,6 +78,7 @@ export function UsersView({ currentUserId }: UsersViewProps) {
   }
 
   const userColumns = buildUserColumns({
+    onViewDetails: setViewingUser,
     onEdit: setEditingUser,
     onDelete: setDeletingUser,
     onApprove: handleApprove,
@@ -78,13 +87,13 @@ export function UsersView({ currentUserId }: UsersViewProps) {
   });
 
   const pendingColumns = buildPendingColumns({
+    onViewDetails: setViewingUser,
     onApprove: handleApprove,
     pendingId: approveMutation.isPending ? approveMutation.variables?.userId : undefined,
   });
 
-  const rejectedUsers = (usersQuery.data ?? []).filter((user) => user.status === AccountStatus.Rejected);
-
   const rejectedColumns = buildRejectedColumns({
+    onViewDetails: setViewingUser,
     onApprove: handleApprove,
     onDelete: setDeletingUser,
     pendingId: approveMutation.isPending ? approveMutation.variables?.userId : undefined,
@@ -106,50 +115,69 @@ export function UsersView({ currentUserId }: UsersViewProps) {
       <Tabs defaultValue={USER_TAB.all}>
         <TabsList className="bg-muted/60">
           <TabsTrigger value={USER_TAB.all}>All users</TabsTrigger>
-          <TabsTrigger value={USER_TAB.pending} className="gap-2">
-            Pending approval
-            {!!pendingQuery.data?.length && (
-              <Badge variant="secondary">{pendingQuery.data.length}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value={USER_TAB.rejected} className="gap-2">
-            Rejected
-            {!!rejectedUsers.length && <Badge variant="secondary">{rejectedUsers.length}</Badge>}
-          </TabsTrigger>
+          <TabsTrigger value={USER_TAB.pending}>Pending approval</TabsTrigger>
+          <TabsTrigger value={USER_TAB.rejected}>Rejected</TabsTrigger>
         </TabsList>
         <TabsContent value={USER_TAB.all} className="space-y-4">
           {usersQuery.isLoading ? (
             <TableSkeleton />
           ) : usersQuery.isError ? (
-            <p className="text-sm text-destructive">Failed to load users.</p>
+            <ErrorState description="Failed to load users." retry={usersQuery.refetch} />
           ) : (
-            <DataTable columns={userColumns} data={usersQuery.data ?? []} emptyMessage="No users yet." />
+            <>
+              <DataTable columns={userColumns} data={users} emptyMessage="No users yet." />
+              {usersQuery.hasNextPage && (
+                <LoadMoreButton
+                  onClick={() => usersQuery.fetchNextPage()}
+                  isLoading={usersQuery.isFetchingNextPage}
+                  label="Load more users"
+                />
+              )}
+            </>
           )}
         </TabsContent>
         <TabsContent value={USER_TAB.pending} className="space-y-4">
           {pendingQuery.isLoading ? (
             <TableSkeleton />
           ) : pendingQuery.isError ? (
-            <p className="text-sm text-destructive">Failed to load pending users.</p>
+            <ErrorState description="Failed to load pending users." retry={pendingQuery.refetch} />
           ) : (
-            <DataTable
-              columns={pendingColumns}
-              data={pendingQuery.data ?? []}
-              emptyMessage="No pending registrations."
-            />
+            <>
+              <DataTable
+                columns={pendingColumns}
+                data={pendingUsers}
+                emptyMessage="No pending registrations."
+              />
+              {pendingQuery.hasNextPage && (
+                <LoadMoreButton
+                  onClick={() => pendingQuery.fetchNextPage()}
+                  isLoading={pendingQuery.isFetchingNextPage}
+                  label="Load more pending users"
+                />
+              )}
+            </>
           )}
         </TabsContent>
         <TabsContent value={USER_TAB.rejected} className="space-y-4">
-          {usersQuery.isLoading ? (
+          {rejectedQuery.isLoading ? (
             <TableSkeleton />
-          ) : usersQuery.isError ? (
-            <p className="text-sm text-destructive">Failed to load users.</p>
+          ) : rejectedQuery.isError ? (
+            <ErrorState description="Failed to load users." retry={rejectedQuery.refetch} />
           ) : (
-            <DataTable
-              columns={rejectedColumns}
-              data={rejectedUsers}
-              emptyMessage="No rejected users."
-            />
+            <>
+              <DataTable
+                columns={rejectedColumns}
+                data={rejectedUsers}
+                emptyMessage="No rejected users."
+              />
+              {rejectedQuery.hasNextPage && (
+                <LoadMoreButton
+                  onClick={() => rejectedQuery.fetchNextPage()}
+                  isLoading={rejectedQuery.isFetchingNextPage}
+                  label="Load more rejected users"
+                />
+              )}
+            </>
           )}
         </TabsContent>
       </Tabs>
@@ -159,6 +187,7 @@ export function UsersView({ currentUserId }: UsersViewProps) {
         onOpenChange={(open) => !open && setApprovingStudent(null)}
         mutation={approveMutation}
       />
+      <UserDetailDialog user={viewingUser} onOpenChange={(open) => !open && setViewingUser(null)} />
       <EditUserDialog user={editingUser} onOpenChange={(open) => !open && setEditingUser(null)} />
       <DeleteUserDialog
         user={deletingUser}

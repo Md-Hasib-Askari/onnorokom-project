@@ -13,9 +13,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { enrollmentColumns } from "./enrollment-columns";
-import { teacherColumns } from "./teacher-columns";
-
 const statusVariant: Record<AdminUserSummary["status"], "default" | "secondary" | "destructive"> = {
   [AccountStatus.Approved]: "default",
   [AccountStatus.Pending]: "secondary",
@@ -23,6 +20,7 @@ const statusVariant: Record<AdminUserSummary["status"], "default" | "secondary" 
 };
 
 export function buildUserColumns(options: {
+  onViewDetails: (user: AdminUserSummary) => void;
   onEdit: (user: AdminUserSummary) => void;
   onDelete: (user: AdminUserSummary) => void;
   onApprove: (user: AdminUserSummary, approve: boolean) => void;
@@ -34,14 +32,18 @@ export function buildUserColumns(options: {
       accessorKey: "fullName",
       header: "Name",
       cell: ({ row }) => (
-        <span className="flex items-center gap-2">
+        <button
+          type="button"
+          className="flex cursor-pointer items-center gap-2 hover:underline"
+          onClick={() => options.onViewDetails(row.original)}
+        >
           {row.original.fullName}
           {row.original.id === options.currentUserId && (
             <Badge variant="outline" className="text-[10px]">
               You
             </Badge>
           )}
-        </span>
+        </button>
       ),
     },
     {
@@ -53,8 +55,6 @@ export function buildUserColumns(options: {
       header: "Role",
       cell: ({ row }) => <Badge variant="outline">{row.original.role}</Badge>,
     },
-    ...enrollmentColumns,
-    ...teacherColumns,
     {
       accessorKey: "status",
       header: "Status",

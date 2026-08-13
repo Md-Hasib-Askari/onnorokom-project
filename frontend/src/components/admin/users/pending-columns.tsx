@@ -4,23 +4,32 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { AdminUserSummary } from "@/lib/api/schemas/admin-users.schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { enrollmentColumns } from "./enrollment-columns";
-import { teacherColumns } from "./teacher-columns";
 
 export function buildPendingColumns(options: {
+  onViewDetails: (user: AdminUserSummary) => void;
   onApprove: (user: AdminUserSummary, approve: boolean) => void;
   pendingId?: string;
 }): ColumnDef<AdminUserSummary>[] {
   return [
-    { accessorKey: "fullName", header: "Name" },
+    {
+      accessorKey: "fullName",
+      header: "Name",
+      cell: ({ row }) => (
+        <button
+          type="button"
+          className="cursor-pointer hover:underline"
+          onClick={() => options.onViewDetails(row.original)}
+        >
+          {row.original.fullName}
+        </button>
+      ),
+    },
     { accessorKey: "email", header: "Email" },
     {
       accessorKey: "role",
       header: "Role",
       cell: ({ row }) => <Badge variant="outline">{row.original.role}</Badge>,
     },
-    ...enrollmentColumns,
-    ...teacherColumns,
     {
       accessorKey: "createdAt",
       header: "Requested",

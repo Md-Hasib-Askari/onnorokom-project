@@ -1,3 +1,4 @@
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
 
@@ -9,12 +10,20 @@ public interface IUserRepository
     Task<AuthUser?> GetByEmailAsync(string email, CancellationToken ct = default);
     Task<AuthUser?> GetByRefreshTokenAsync(string refreshToken, CancellationToken ct = default);
     Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default);
-    Task<List<AuthUser>> GetAllAsync(CancellationToken ct = default);
+    Task<PagedResult<AuthUser>> GetPageAsync(
+        int limit,
+        DateTimeOffset? afterCreatedAt,
+        Guid? afterId,
+        AccountStatus? status,
+        UserRole? role,
+        CancellationToken ct = default);
     Task<bool> HasAssignedSubjectsAsync(Guid userId, CancellationToken ct = default);
     Task<bool> HasAssignmentsAsync(Guid userId, CancellationToken ct = default);
     Task<bool> HasSubmissionsAsync(Guid userId, CancellationToken ct = default);
     Task<bool> HasGradedSubmissionsAsync(Guid userId, CancellationToken ct = default);
     Task<int> CountUsableAdminsAsync(CancellationToken ct = default);
+
+
     Task AddAsync(AuthUser user, CancellationToken ct = default);
     Task UpdateAsync(AuthUser user, CancellationToken ct = default);
 }

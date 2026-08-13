@@ -1,4 +1,5 @@
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Admin;
 using AssignmentSystem.Application.DTOs.Auth;
 using AssignmentSystem.Domain.Enums;
@@ -24,11 +25,28 @@ public class AdminUserController(
         return Ok(new ApproveUserResponse(user.Id, user.Email, user.FullName, user.Role, user.Status));
     }
 
+    /// <summary>
+    /// Paginated, keyset-ordered by <c>(CreatedAt, Id)</c> ascending. The pending list is a
+    /// <c>status=Pending</c> filter on this same endpoint; <c>role</c> is accepted for the
+    /// section-subjects teacher picker (<c>?role=Teacher&amp;limit=100</c>).
+    /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetAllUsers(CancellationToken ct)
+    public async Task<IActionResult> GetAllUsers(
+        [FromQuery] int? limit,
+        [FromQuery] string? cursor,
+        [FromQuery] AccountStatus? status,
+        [FromQuery] UserRole? role,
+        CancellationToken ct)
     {
-        var users = await adminUserService.GetAllUsersAsync(ct);
+        var users = await adminUserService.GetAllUsersAsync(new PageRequest(limit), cursor, status, role, ct);
         return Ok(users);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetUserById(Guid id, CancellationToken ct)
+    {
+        var user = await adminUserService.GetUserByIdAsync(id, ct);
+        return Ok(user);
     }
 
     [HttpPost]
