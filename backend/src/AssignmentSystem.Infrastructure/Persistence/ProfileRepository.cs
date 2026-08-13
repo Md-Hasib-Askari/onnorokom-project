@@ -1,4 +1,5 @@
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +15,50 @@ public class ProfileRepository(AppDbContext dbContext) : IProfileRepository
     public async Task<List<StudentProfile>> GetStudentsByUserIdsAsync(IEnumerable<Guid> authUserIds, CancellationToken ct = default)
     {
         return await dbContext.StudentProfiles.Where(p => authUserIds.Contains(p.AuthUserId)).ToListAsync(ct);
+    }
+
+    public async Task<PagedResult<StudentProfile>> GetStudentsPageBySectionIdsAsync(
+        IEnumerable<Guid> sectionIds,
+        int limit,
+        string? afterSectionName,
+        string? afterFullName,
+        Guid? afterId,
+        CancellationToken ct = default)
+    {
+        var ids = sectionIds.ToList();
+        if (ids.Count == 0)
+        {
+            return PagedResult<StudentProfile>.FromAll([]);
+        }
+
+        var rows = await dbContext.StudentProfiles
+            .Include(p => p.AuthUser)
+            .Include(p => p.Section)
+            .ThenInclude(s => s!.Grade)
+            .Where(p => ids.Contains(p.SectionId))
+            .ApplyKeysetPaging(
+                p => p.Section!.Name,
+                p => p.AuthUser!.FullName,
+                afterSectionName,
+                afterFullName,
+                afterId,
+                descending: false,
+                limit)
+            .ToListAsync(ct);
+
+        return PagedResult<StudentProfile>.FromRows(rows, limit, last =>
+            CursorCodec.Encode(last.Section!.Name, last.AuthUser!.FullName, last.Id));
+    }
+
+    public async Task<int> CountStudentsBySectionIdsAsync(IEnumerable<Guid> sectionIds, CancellationToken ct = default)
+    {
+        var ids = sectionIds.ToList();
+        if (ids.Count == 0)
+        {
+            return 0;
+        }
+
+        return await dbContext.StudentProfiles.CountAsync(p => ids.Contains(p.SectionId), ct);
     }
 
     public async Task<TeacherProfile?> GetTeacherByUserIdAsync(Guid authUserId, CancellationToken ct = default)

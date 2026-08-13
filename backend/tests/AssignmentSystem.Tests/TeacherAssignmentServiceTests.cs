@@ -266,6 +266,68 @@ public class TeacherAssignmentServiceTests
         Assert.Equal(_subjectId, link.SubjectId);
     }
 
+    [Fact]
+    public async Task GetMyStudents_ReturnsOnlyStudentsInTaughtSections()
+    {
+        GiveTeacherTheSectionSubject();
+        var otherSectionId = Guid.NewGuid();
+
+        var mine = StudentProfile.Create(Guid.NewGuid(), _sectionId);
+        mine.UpdateDetails("R-101", null, null, null, null, null, null);
+        _profiles.Students.Add(mine);
+
+        var other = StudentProfile.Create(Guid.NewGuid(), otherSectionId);
+        _profiles.Students.Add(other);
+
+        var page = await _sut.GetMyStudentsAsync(new PageRequest(null), null);
+
+        var student = Assert.Single(page.Items);
+        Assert.Equal(mine.AuthUserId, student.Id);
+        Assert.Equal("R-101", student.RollNumber);
+        Assert.Equal(_sectionId, student.SectionId);
+    }
+
+    [Fact]
+    public async Task GetMyStudents_PagesBySectionThenNameAndWalksTheCursor()
+    {
+        GiveTeacherTheSectionSubject();
+
+        var first = SeedTaughtStudent("Beta", "Alice");
+        var second = SeedTaughtStudent("Alpha", "Zoe");
+        var third = SeedTaughtStudent("Alpha", "Bob");
+
+        var firstPage = await _sut.GetMyStudentsAsync(new PageRequest(2), null);
+
+        // Ordered by (Section.Name, FullName, Id): Alpha/Bob, Alpha/Zoe, Beta/Alice.
+        Assert.Equal([third.Id, second.Id], firstPage.Items.Select(s => s.Id).ToArray());
+        Assert.True(firstPage.HasMore);
+        Assert.NotNull(firstPage.NextCursor);
+
+        var secondPage = await _sut.GetMyStudentsAsync(new PageRequest(2), firstPage.NextCursor);
+
+        Assert.Equal([first.Id], secondPage.Items.Select(s => s.Id).ToArray());
+        Assert.False(secondPage.HasMore);
+        Assert.Null(secondPage.NextCursor);
+    }
+
+    private TeacherStudentDto SeedTaughtStudent(string sectionName, string fullName)
+    {
+        var student = StudentProfile.Create(Guid.NewGuid(), _sectionId);
+        var section = Section.Create(sectionName, Guid.NewGuid());
+        var user = AuthUser.CreatePending(fullName, $"{fullName}@example.com", "hash", UserRole.Student);
+        typeof(StudentProfile).GetProperty(nameof(StudentProfile.Section))!.SetValue(student, section);
+        typeof(StudentProfile).GetProperty(nameof(StudentProfile.AuthUser))!.SetValue(student, user);
+        _profiles.Students.Add(student);
+        return new TeacherStudentDto(
+            student.AuthUserId,
+            user.FullName,
+            student.RollNumber,
+            student.SectionId,
+            section.Name,
+            null);
+    }
+
+
 
 
     private sealed class FakeAssignmentRepository(FakeSubmissionRepository submissions) : IAssignmentRepository

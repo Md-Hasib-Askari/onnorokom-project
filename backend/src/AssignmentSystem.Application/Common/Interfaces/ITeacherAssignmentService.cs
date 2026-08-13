@@ -6,6 +6,10 @@ namespace AssignmentSystem.Application.Common.Interfaces;
 public interface ITeacherAssignmentService
 {
     Task<PagedResult<TeacherSectionSubjectDto>> GetMySectionSubjectsAsync(CancellationToken ct = default);
+    Task<PagedResult<TeacherStudentDto>> GetMyStudentsAsync(
+        PageRequest page,
+        string? cursor,
+        CancellationToken ct = default);
     Task<PagedResult<TeacherAssignmentDto>> GetMyAssignmentsAsync(
         PageRequest page,
         string? cursor,

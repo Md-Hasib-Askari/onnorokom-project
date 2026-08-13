@@ -33,6 +33,35 @@ public class TeacherAssignmentService(
         return PagedResult<TeacherSectionSubjectDto>.FromAll(items);
     }
 
+    public async Task<PagedResult<TeacherStudentDto>> GetMyStudentsAsync(
+        PageRequest page,
+        string? cursor,
+        CancellationToken ct = default)
+    {
+        var teacherId = currentUser.GetRequiredUserId();
+        var links = await sectionSubjectRepository.GetByTeacherAsync(teacherId, ct);
+        var sectionIds = links.Select(link => link.SectionId).Distinct().ToList();
+
+        string? afterSectionName = null;
+        string? afterFullName = null;
+        Guid? afterId = null;
+        if (cursor is not null)
+        {
+            (afterSectionName, afterFullName, afterId) = CursorCodec.DecodeStringPair(cursor);
+        }
+
+        var students = await profileRepository.GetStudentsPageBySectionIdsAsync(
+            sectionIds, page.Limit, afterSectionName, afterFullName, afterId, ct);
+
+        return students.Map(student => new TeacherStudentDto(
+            student.AuthUserId,
+            student.AuthUser?.FullName ?? string.Empty,
+            student.RollNumber,
+            student.SectionId,
+            student.Section?.Name,
+            student.Section?.Grade?.Name));
+    }
+
     public async Task<PagedResult<TeacherAssignmentDto>> GetMyAssignmentsAsync(
         PageRequest page,
         string? cursor,

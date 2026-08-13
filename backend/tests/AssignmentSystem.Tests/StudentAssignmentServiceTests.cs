@@ -374,6 +374,11 @@ public class StudentAssignmentServiceTests
 
     private sealed class FakeProfileRepository : IProfileRepository
     {
+        public Task<int> CountStudentsBySectionIdsAsync(IEnumerable<Guid> sectionIds, CancellationToken ct = default)
+        {
+            var ids = sectionIds.ToHashSet();
+            return Task.FromResult(Students.Count(p => ids.Contains(p.SectionId)));
+        }
         public List<StudentProfile> Students { get; } = [];
 
         public Task<StudentProfile?> GetStudentByUserIdAsync(Guid authUserId, CancellationToken ct = default)
@@ -384,6 +389,17 @@ public class StudentAssignmentServiceTests
             var ids = authUserIds.ToHashSet();
             return Task.FromResult(Students.Where(p => ids.Contains(p.AuthUserId)).ToList());
         }
+
+        public Task<PagedResult<StudentProfile>> GetStudentsPageBySectionIdsAsync(
+            IEnumerable<Guid> sectionIds,
+            int limit,
+            string? afterSectionName,
+            string? afterFullName,
+            Guid? afterId,
+            CancellationToken ct = default)
+            => Task.FromResult(PagedResult<StudentProfile>.FromAll(
+                Students.Where(p => sectionIds.Contains(p.SectionId)).ToList()));
+
 
         public Task<TeacherProfile?> GetTeacherByUserIdAsync(Guid authUserId, CancellationToken ct = default)
             => Task.FromResult<TeacherProfile?>(null);

@@ -1,4 +1,5 @@
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,5 +20,15 @@ public class TeacherWorkspaceController(ITeacherAssignmentService teacherAssignm
     {
         var sectionSubjects = await teacherAssignmentService.GetMySectionSubjectsAsync(ct);
         return Ok(sectionSubjects);
+    }
+
+    [HttpGet("students")]
+    public async Task<IActionResult> GetMyStudents(
+        [FromQuery] int? limit,
+        [FromQuery] string? cursor,
+        CancellationToken ct)
+    {
+        var students = await teacherAssignmentService.GetMyStudentsAsync(new PageRequest(limit), cursor, ct);
+        return Ok(students);
     }
 }
