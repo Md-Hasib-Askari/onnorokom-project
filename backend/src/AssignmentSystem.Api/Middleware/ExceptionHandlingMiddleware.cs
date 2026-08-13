@@ -26,6 +26,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             EntityInUseException iu => (StatusCodes.Status409Conflict, Error(iu)),
             EntityNotFoundException nf => (StatusCodes.Status404NotFound, Error(nf)),
             RegistrationDisabledException rd => (StatusCodes.Status403Forbidden, Error(rd)),
+            ProfileEditDisabledException pd => (StatusCodes.Status403Forbidden, Error(pd)),
             ForbiddenException fb => (StatusCodes.Status403Forbidden, Error(fb)),
             DomainException d => (StatusCodes.Status400BadRequest, Error(d)),
             ValidationException ve => (StatusCodes.Status400BadRequest, ValidationError(ve)),

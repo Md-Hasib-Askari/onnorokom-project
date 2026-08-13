@@ -11,5 +11,11 @@ public enum SystemSettingKey
     TeacherSelfRegistrationEnabled,
 
     /// <summary>Whether the public registration endpoint accepts new student accounts.</summary>
-    StudentSelfRegistrationEnabled
+    StudentSelfRegistrationEnabled,
+
+    /// <summary>Whether teachers can edit their own role-specific profile fields.</summary>
+    TeacherProfileSelfEditEnabled,
+
+    /// <summary>Whether students can edit their own role-specific profile fields.</summary>
+    StudentProfileSelfEditEnabled
 }

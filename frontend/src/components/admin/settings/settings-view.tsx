@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-import type { RegistrationPolicy } from "@/lib/api/schemas/settings.schema";
+import type { SystemSettings } from "@/lib/api/schemas/settings.schema";
 import { ERROR_MESSAGES } from "@/lib/messages";
 import { AdminSettingMutations } from "@/lib/mutations/admin-settings.mutations";
 import { AdminSettingQueries } from "@/lib/queries/admin-settings.queries";
@@ -19,12 +19,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { ErrorState } from "@/components/workspace/error-state";
 
-/** Placeholder rows shown while the policy loads: one per toggle. */
-const SKELETON_ROW_COUNT = 2;
+/** Placeholder rows shown while the settings load: one per toggle. */
+const SKELETON_ROW_COUNT = 4;
 
 export function SettingsView() {
-  const policyQuery = AdminSettingQueries.useRegistrationPolicy();
+  const settingsQuery = AdminSettingQueries.useSystemSettings();
 
   return (
     <div className="space-y-6">
@@ -35,35 +36,42 @@ export function SettingsView() {
         </p>
       </div>
 
-      {policyQuery.isLoading ? (
-        <PolicySkeleton />
-      ) : policyQuery.isError || !policyQuery.data ? (
-        <p className="text-sm text-destructive">Failed to load settings.</p>
+      {settingsQuery.isLoading ? (
+        <SettingsSkeleton />
+      ) : settingsQuery.isError || !settingsQuery.data ? (
+        <ErrorState description="Failed to load settings." retry={settingsQuery.refetch} />
       ) : (
         // Remounting on a fresh policy lets the form seed its draft from server state without an
         // effect, and discards any unsaved edits that a refetch has already overtaken.
-        <RegistrationPolicyForm
-          key={`${policyQuery.data.teacherSelfRegistrationEnabled}-${policyQuery.data.studentSelfRegistrationEnabled}`}
-          policy={policyQuery.data}
+        <SystemSettingsForm
+          key={[
+            settingsQuery.data.teacherSelfRegistrationEnabled,
+            settingsQuery.data.studentSelfRegistrationEnabled,
+            settingsQuery.data.teacherProfileSelfEditEnabled,
+            settingsQuery.data.studentProfileSelfEditEnabled,
+          ].join("-")}
+          settings={settingsQuery.data}
         />
       )}
     </div>
   );
 }
 
-function RegistrationPolicyForm({ policy }: { policy: RegistrationPolicy }) {
-  const updateMutation = AdminSettingMutations.useUpdateRegistrationPolicy();
-  const [draft, setDraft] = useState<RegistrationPolicy>(policy);
+function SystemSettingsForm({ settings }: { settings: SystemSettings }) {
+  const updateMutation = AdminSettingMutations.useUpdateSystemSettings();
+  const [draft, setDraft] = useState<SystemSettings>(settings);
 
   const isDirty =
-    draft.teacherSelfRegistrationEnabled !== policy.teacherSelfRegistrationEnabled ||
-    draft.studentSelfRegistrationEnabled !== policy.studentSelfRegistrationEnabled;
+    draft.teacherSelfRegistrationEnabled !== settings.teacherSelfRegistrationEnabled ||
+    draft.studentSelfRegistrationEnabled !== settings.studentSelfRegistrationEnabled ||
+    draft.teacherProfileSelfEditEnabled !== settings.teacherProfileSelfEditEnabled ||
+    draft.studentProfileSelfEditEnabled !== settings.studentProfileSelfEditEnabled;
 
   function handleSave() {
     updateMutation.mutate(draft, {
       onSuccess: (result) => {
         if (result.success) {
-          toast.success("Registration settings saved.");
+          toast.success("Settings saved.");
           return;
         }
 
@@ -78,34 +86,72 @@ function RegistrationPolicyForm({ policy }: { policy: RegistrationPolicy }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Public sign-up</CardTitle>
+        <CardTitle>System settings</CardTitle>
         <CardDescription>
-          Choose which roles may create their own account. Accounts created this way still wait for
-          your approval, and admins are never allowed to self-register.
+          These rules apply to everyone on the platform. Changes take effect immediately.
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        <ToggleRow
-          id="teacher-self-registration"
-          label="Teachers can register"
-          description="Teachers can sign up themselves and appear in your pending queue."
-          checked={draft.teacherSelfRegistrationEnabled}
-          disabled={updateMutation.isPending}
-          onCheckedChange={(checked) =>
-            setDraft((current) => ({ ...current, teacherSelfRegistrationEnabled: checked }))
-          }
-        />
-        <ToggleRow
-          id="student-self-registration"
-          label="Students can register"
-          description="Students can sign up themselves. You assign their section when you approve them."
-          checked={draft.studentSelfRegistrationEnabled}
-          disabled={updateMutation.isPending}
-          onCheckedChange={(checked) =>
-            setDraft((current) => ({ ...current, studentSelfRegistrationEnabled: checked }))
-          }
-        />
+      <CardContent className="space-y-6">
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-sm font-semibold">Public sign-up</h2>
+            <p className="text-sm text-muted-foreground">
+              Choose which roles may create their own account. Accounts created this way still wait
+              for your approval, and admins are never allowed to self-register.
+            </p>
+          </div>
+          <ToggleRow
+            id="teacher-self-registration"
+            label="Teachers can register"
+            description="Teachers can sign up themselves and appear in your pending queue."
+            checked={draft.teacherSelfRegistrationEnabled}
+            disabled={updateMutation.isPending}
+            onCheckedChange={(checked) =>
+              setDraft((current) => ({ ...current, teacherSelfRegistrationEnabled: checked }))
+            }
+          />
+          <ToggleRow
+            id="student-self-registration"
+            label="Students can register"
+            description="Students can sign up themselves. You assign their section when you approve them."
+            checked={draft.studentSelfRegistrationEnabled}
+            disabled={updateMutation.isPending}
+            onCheckedChange={(checked) =>
+              setDraft((current) => ({ ...current, studentSelfRegistrationEnabled: checked }))
+            }
+          />
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-sm font-semibold">Profile self-editing</h2>
+            <p className="text-sm text-muted-foreground">
+              Choose which roles may edit their own role-specific profile fields. Full name always
+              stays editable regardless of these toggles.
+            </p>
+          </div>
+          <ToggleRow
+            id="teacher-profile-self-edit"
+            label="Teachers can edit their profile"
+            description="Teachers can update their department, designation, and other profile fields."
+            checked={draft.teacherProfileSelfEditEnabled}
+            disabled={updateMutation.isPending}
+            onCheckedChange={(checked) =>
+              setDraft((current) => ({ ...current, teacherProfileSelfEditEnabled: checked }))
+            }
+          />
+          <ToggleRow
+            id="student-profile-self-edit"
+            label="Students can edit their profile"
+            description="Students can update their guardian info, address, and other profile fields."
+            checked={draft.studentProfileSelfEditEnabled}
+            disabled={updateMutation.isPending}
+            onCheckedChange={(checked) =>
+              setDraft((current) => ({ ...current, studentProfileSelfEditEnabled: checked }))
+            }
+          />
+        </div>
       </CardContent>
 
       <CardFooter className="justify-end">
@@ -151,7 +197,7 @@ function ToggleRow({
   );
 }
 
-function PolicySkeleton() {
+function SettingsSkeleton() {
   return (
     <div className="space-y-2">
       {Array.from({ length: SKELETON_ROW_COUNT }).map((_, index) => (

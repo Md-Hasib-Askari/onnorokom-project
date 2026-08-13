@@ -1,27 +1,27 @@
 import { apiClient, authHeaders } from "./client";
 import {
-  registrationPolicySchema,
-  registrationPolicyUpdateResponseSchema,
-  type RegistrationPolicy,
-  type RegistrationPolicyUpdateRequest,
+  systemSettingsSchema,
+  systemSettingsUpdateResponseSchema,
+  type SystemSettings,
+  type SystemSettingsUpdateRequest,
 } from "./schemas/settings.schema";
 
-/** `/api/admin/settings/*`, requires an Admin access token. */
+/** `/api/admin/settings`, requires an Admin access token. */
 export class AdminSettingsApi {
-  static async getRegistrationPolicy(accessToken: string): Promise<RegistrationPolicy> {
-    const { data } = await apiClient.get("/api/admin/settings/registration-policy", {
+  static async getSystemSettings(accessToken: string): Promise<SystemSettings> {
+    const { data } = await apiClient.get("/api/admin/settings", {
       headers: authHeaders(accessToken),
     });
-    return registrationPolicySchema.parse(data);
+    return systemSettingsSchema.parse(data);
   }
 
-  static async updateRegistrationPolicy(
+  static async updateSystemSettings(
     accessToken: string,
-    payload: RegistrationPolicyUpdateRequest
-  ): Promise<RegistrationPolicy> {
-    const { data } = await apiClient.put("/api/admin/settings/registration-policy", payload, {
+    payload: SystemSettingsUpdateRequest
+  ): Promise<SystemSettings> {
+    const { data } = await apiClient.put("/api/admin/settings", payload, {
       headers: authHeaders(accessToken),
     });
-    return registrationPolicyUpdateResponseSchema.parse(data);
+    return systemSettingsUpdateResponseSchema.parse(data);
   }
 }

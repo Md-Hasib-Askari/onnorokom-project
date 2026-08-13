@@ -14,17 +14,26 @@ public class SystemSettingService(ISystemSettingRepository systemSettingReposito
     /// </summary>
     private const bool MissingSettingFallback = false;
 
-    public async Task<RegistrationPolicyDto> GetRegistrationPolicyAsync(CancellationToken ct = default)
+    /// <summary>
+    /// Applied when a profile-edit key has no row at all. Deliberately permissive, unlike
+    /// <see cref="MissingSettingFallback"/>: self-editing is open by default and an admin must
+    /// take an explicit action to close it.
+    /// </summary>
+    private const bool MissingProfileEditSettingFallback = true;
+
+    public async Task<SystemSettingsDto> GetSystemSettingsAsync(CancellationToken ct = default)
     {
         var byKey = await LoadByKeyAsync(ct);
 
-        return new RegistrationPolicyDto(
+        return new SystemSettingsDto(
             ReadBoolean(byKey, SystemSettingKey.TeacherSelfRegistrationEnabled),
-            ReadBoolean(byKey, SystemSettingKey.StudentSelfRegistrationEnabled));
+            ReadBoolean(byKey, SystemSettingKey.StudentSelfRegistrationEnabled),
+            ReadBoolean(byKey, SystemSettingKey.TeacherProfileSelfEditEnabled, MissingProfileEditSettingFallback),
+            ReadBoolean(byKey, SystemSettingKey.StudentProfileSelfEditEnabled, MissingProfileEditSettingFallback));
     }
 
-    public async Task<RegistrationPolicyDto> UpdateRegistrationPolicyAsync(
-        RegistrationPolicyUpdateRequest request,
+    public async Task<SystemSettingsDto> UpdateSystemSettingsAsync(
+        SystemSettingsUpdateRequest request,
         CancellationToken ct = default)
     {
         var byKey = await LoadByKeyAsync(ct);
@@ -32,14 +41,27 @@ public class SystemSettingService(ISystemSettingRepository systemSettingReposito
         var updated = new List<SystemSetting>
         {
             Apply(byKey, SystemSettingKey.TeacherSelfRegistrationEnabled, request.TeacherSelfRegistrationEnabled),
-            Apply(byKey, SystemSettingKey.StudentSelfRegistrationEnabled, request.StudentSelfRegistrationEnabled)
+            Apply(byKey, SystemSettingKey.StudentSelfRegistrationEnabled, request.StudentSelfRegistrationEnabled),
+            Apply(byKey, SystemSettingKey.TeacherProfileSelfEditEnabled, request.TeacherProfileSelfEditEnabled),
+            Apply(byKey, SystemSettingKey.StudentProfileSelfEditEnabled, request.StudentProfileSelfEditEnabled)
         };
 
         await systemSettingRepository.UpsertAsync(updated, ct);
 
-        return new RegistrationPolicyDto(
+        return new SystemSettingsDto(
             request.TeacherSelfRegistrationEnabled,
-            request.StudentSelfRegistrationEnabled);
+            request.StudentSelfRegistrationEnabled,
+            request.TeacherProfileSelfEditEnabled,
+            request.StudentProfileSelfEditEnabled);
+    }
+
+    public async Task<RegistrationPolicyDto> GetRegistrationPolicyAsync(CancellationToken ct = default)
+    {
+        var byKey = await LoadByKeyAsync(ct);
+
+        return new RegistrationPolicyDto(
+            ReadBoolean(byKey, SystemSettingKey.TeacherSelfRegistrationEnabled),
+            ReadBoolean(byKey, SystemSettingKey.StudentSelfRegistrationEnabled));
     }
 
     public async Task EnsureSelfRegistrationAllowedAsync(UserRole role, CancellationToken ct = default)
@@ -66,15 +88,49 @@ public class SystemSettingService(ISystemSettingRepository systemSettingReposito
         }
     }
 
+    public async Task<ProfileEditPolicyDto> GetProfileEditPolicyAsync(CancellationToken ct = default)
+    {
+        var byKey = await LoadByKeyAsync(ct);
+
+        return new ProfileEditPolicyDto(
+            ReadBoolean(byKey, SystemSettingKey.TeacherProfileSelfEditEnabled, MissingProfileEditSettingFallback),
+            ReadBoolean(byKey, SystemSettingKey.StudentProfileSelfEditEnabled, MissingProfileEditSettingFallback));
+    }
+
+    public async Task EnsureProfileEditAllowedAsync(UserRole role, CancellationToken ct = default)
+    {
+        if (role == UserRole.Admin)
+        {
+            return;
+        }
+
+        var policy = await GetProfileEditPolicyAsync(ct);
+
+        var allowed = role switch
+        {
+            UserRole.Teacher => policy.TeacherProfileSelfEditEnabled,
+            UserRole.Student => policy.StudentProfileSelfEditEnabled,
+            _ => false
+        };
+
+        if (!allowed)
+        {
+            throw new ProfileEditDisabledException(role);
+        }
+    }
+
     private async Task<Dictionary<SystemSettingKey, SystemSetting>> LoadByKeyAsync(CancellationToken ct)
     {
         var settings = await systemSettingRepository.GetAllAsync(ct);
         return settings.ToDictionary(s => s.Key);
     }
 
-    private static bool ReadBoolean(IReadOnlyDictionary<SystemSettingKey, SystemSetting> byKey, SystemSettingKey key)
+    private static bool ReadBoolean(
+        IReadOnlyDictionary<SystemSettingKey, SystemSetting> byKey,
+        SystemSettingKey key,
+        bool missingFallback = MissingSettingFallback)
     {
-        return byKey.TryGetValue(key, out var setting) ? setting.AsBoolean() : MissingSettingFallback;
+        return byKey.TryGetValue(key, out var setting) ? setting.AsBoolean() : missingFallback;
     }
 
     /// <summary>

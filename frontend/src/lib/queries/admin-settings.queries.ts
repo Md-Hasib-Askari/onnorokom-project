@@ -1,19 +1,19 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getRegistrationPolicyAction } from "@/lib/actions/admin-settings.actions";
+import { getSystemSettingsAction } from "@/lib/actions/admin-settings.actions";
 
 export const adminSettingsKeys = {
   all: ["admin", "settings"] as const,
-  registrationPolicy: () => [...adminSettingsKeys.all, "registration-policy"] as const,
+  systemSettings: () => [...adminSettingsKeys.all, "system-settings"] as const,
 };
 
 /** Grouped under one namespace so every admin-settings query is defined in a single place. */
 export const AdminSettingQueries = {
-  useRegistrationPolicy() {
+  useSystemSettings() {
     return useQuery({
-      queryKey: adminSettingsKeys.registrationPolicy(),
-      queryFn: () => getRegistrationPolicyAction(),
+      queryKey: adminSettingsKeys.systemSettings(),
+      queryFn: () => getSystemSettingsAction(),
     });
   },
 };

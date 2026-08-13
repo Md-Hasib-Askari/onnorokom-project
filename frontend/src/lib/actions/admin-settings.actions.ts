@@ -6,9 +6,9 @@ import { ApiError } from "@/lib/api/client";
 import { HttpStatus } from "@/lib/api/http-status";
 import { fieldErrorsFrom } from "@/lib/api/zod-error";
 import {
-  registrationPolicyUpdateRequestSchema,
-  type RegistrationPolicy,
-  type RegistrationPolicyUpdateRequest,
+  systemSettingsUpdateRequestSchema,
+  type SystemSettings,
+  type SystemSettingsUpdateRequest,
 } from "@/lib/api/schemas/settings.schema";
 import { UserRole } from "@/lib/api/schemas/common.schema";
 import { ERROR_MESSAGES } from "@/lib/messages";
@@ -22,23 +22,23 @@ async function accessTokenOrThrow(): Promise<string> {
   return token;
 }
 
-export async function getRegistrationPolicyAction(): Promise<RegistrationPolicy> {
+export async function getSystemSettingsAction(): Promise<SystemSettings> {
   await requireRole(UserRole.Admin);
   const token = await accessTokenOrThrow();
-  return AdminSettingsApi.getRegistrationPolicy(token);
+  return AdminSettingsApi.getSystemSettings(token);
 }
 
-export async function updateRegistrationPolicyAction(
-  input: RegistrationPolicyUpdateRequest
+export async function updateSystemSettingsAction(
+  input: SystemSettingsUpdateRequest
 ): Promise<ActionResult> {
   await requireRole(UserRole.Admin);
-  const parsed = registrationPolicyUpdateRequestSchema.safeParse(input);
+  const parsed = systemSettingsUpdateRequestSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: ERROR_MESSAGES.validation, fieldErrors: fieldErrorsFrom(parsed.error) };
   }
   try {
     const token = await accessTokenOrThrow();
-    await AdminSettingsApi.updateRegistrationPolicy(token, parsed.data);
+    await AdminSettingsApi.updateSystemSettings(token, parsed.data);
   } catch (error) {
     if (error instanceof ApiError) return { success: false, error: error.message, fieldErrors: error.fieldErrors };
     return { success: false, error: ERROR_MESSAGES.genericRetry };

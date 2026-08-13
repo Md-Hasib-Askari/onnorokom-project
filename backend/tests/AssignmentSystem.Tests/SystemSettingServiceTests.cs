@@ -20,7 +20,7 @@ public class SystemSettingServiceTests
     [Fact]
     public async Task GetRegistrationPolicy_ReturnsStoredValues()
     {
-        Seed(teacherEnabled: true, studentEnabled: false);
+        Seed(teacherRegistration: true, studentRegistration: false);
 
         var policy = await _sut.GetRegistrationPolicyAsync();
 
@@ -53,33 +53,62 @@ public class SystemSettingServiceTests
     }
 
     [Fact]
-    public async Task UpdateRegistrationPolicy_OverwritesExistingRows()
+    public async Task GetSystemSettings_ReturnsBothPolicies()
     {
-        Seed(teacherEnabled: true, studentEnabled: false);
+        Seed(
+            teacherRegistration: true,
+            studentRegistration: false,
+            teacherProfileEdit: false,
+            studentProfileEdit: true);
 
-        var policy = await _sut.UpdateRegistrationPolicyAsync(new RegistrationPolicyUpdateRequest(false, true));
+        var settings = await _sut.GetSystemSettingsAsync();
 
-        Assert.False(policy.TeacherSelfRegistrationEnabled);
-        Assert.True(policy.StudentSelfRegistrationEnabled);
+        Assert.True(settings.TeacherSelfRegistrationEnabled);
+        Assert.False(settings.StudentSelfRegistrationEnabled);
+        Assert.False(settings.TeacherProfileSelfEditEnabled);
+        Assert.True(settings.StudentProfileSelfEditEnabled);
+    }
 
-        var reloaded = await _sut.GetRegistrationPolicyAsync();
+    [Fact]
+    public async Task UpdateSystemSettings_OverwritesExistingRows()
+    {
+        Seed(
+            teacherRegistration: true,
+            studentRegistration: false,
+            teacherProfileEdit: false,
+            studentProfileEdit: true);
+
+        var settings = await _sut.UpdateSystemSettingsAsync(
+            new SystemSettingsUpdateRequest(false, true, true, false));
+
+        Assert.False(settings.TeacherSelfRegistrationEnabled);
+        Assert.True(settings.StudentSelfRegistrationEnabled);
+        Assert.True(settings.TeacherProfileSelfEditEnabled);
+        Assert.False(settings.StudentProfileSelfEditEnabled);
+
+        var reloaded = await _sut.GetSystemSettingsAsync();
         Assert.False(reloaded.TeacherSelfRegistrationEnabled);
         Assert.True(reloaded.StudentSelfRegistrationEnabled);
+        Assert.True(reloaded.TeacherProfileSelfEditEnabled);
+        Assert.False(reloaded.StudentProfileSelfEditEnabled);
     }
 
     /// <summary>
     /// A key that was never persisted heals on the first save instead of being silently dropped.
     /// </summary>
     [Fact]
-    public async Task UpdateRegistrationPolicy_MissingRows_InsertsThem()
+    public async Task UpdateSystemSettings_MissingRows_InsertsThem()
     {
-        await _sut.UpdateRegistrationPolicyAsync(new RegistrationPolicyUpdateRequest(true, true));
+        await _sut.UpdateSystemSettingsAsync(
+            new SystemSettingsUpdateRequest(true, true, true, true));
 
-        Assert.Equal(2, _repo.Settings.Count);
+        Assert.Equal(4, _repo.Settings.Count);
 
-        var reloaded = await _sut.GetRegistrationPolicyAsync();
+        var reloaded = await _sut.GetSystemSettingsAsync();
         Assert.True(reloaded.TeacherSelfRegistrationEnabled);
         Assert.True(reloaded.StudentSelfRegistrationEnabled);
+        Assert.True(reloaded.TeacherProfileSelfEditEnabled);
+        Assert.True(reloaded.StudentProfileSelfEditEnabled);
     }
 
     [Theory]
@@ -87,7 +116,7 @@ public class SystemSettingServiceTests
     [InlineData(UserRole.Student)]
     public async Task EnsureSelfRegistrationAllowed_RoleEnabled_DoesNotThrow(UserRole role)
     {
-        Seed(teacherEnabled: true, studentEnabled: true);
+        Seed();
 
         await _sut.EnsureSelfRegistrationAllowedAsync(role);
     }
@@ -97,7 +126,7 @@ public class SystemSettingServiceTests
     [InlineData(UserRole.Student)]
     public async Task EnsureSelfRegistrationAllowed_RoleDisabled_Throws(UserRole role)
     {
-        Seed(teacherEnabled: false, studentEnabled: false);
+        Seed(teacherRegistration: false, studentRegistration: false, teacherProfileEdit: false, studentProfileEdit: false);
 
         await Assert.ThrowsAsync<RegistrationDisabledException>(
             () => _sut.EnsureSelfRegistrationAllowedAsync(role));
@@ -107,7 +136,7 @@ public class SystemSettingServiceTests
     [Fact]
     public async Task EnsureSelfRegistrationAllowed_Admin_AlwaysThrows()
     {
-        Seed(teacherEnabled: true, studentEnabled: true);
+        Seed();
 
         await Assert.ThrowsAsync<RegistrationDisabledException>(
             () => _sut.EnsureSelfRegistrationAllowedAsync(UserRole.Admin));
@@ -129,12 +158,20 @@ public class SystemSettingServiceTests
         return setting;
     }
 
-    private void Seed(bool teacherEnabled, bool studentEnabled)
+    private void Seed(
+        bool teacherRegistration = true,
+        bool studentRegistration = true,
+        bool teacherProfileEdit = true,
+        bool studentProfileEdit = true)
     {
         _repo.Settings.Add(
-            SystemSetting.CreateBoolean(SystemSettingKey.TeacherSelfRegistrationEnabled, teacherEnabled));
+            SystemSetting.CreateBoolean(SystemSettingKey.TeacherSelfRegistrationEnabled, teacherRegistration));
         _repo.Settings.Add(
-            SystemSetting.CreateBoolean(SystemSettingKey.StudentSelfRegistrationEnabled, studentEnabled));
+            SystemSetting.CreateBoolean(SystemSettingKey.StudentSelfRegistrationEnabled, studentRegistration));
+        _repo.Settings.Add(
+            SystemSetting.CreateBoolean(SystemSettingKey.TeacherProfileSelfEditEnabled, teacherProfileEdit));
+        _repo.Settings.Add(
+            SystemSetting.CreateBoolean(SystemSettingKey.StudentProfileSelfEditEnabled, studentProfileEdit));
     }
 
     /// <summary>

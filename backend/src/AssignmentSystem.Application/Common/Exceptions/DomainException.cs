@@ -62,6 +62,12 @@ public class PasswordResetRateLimitedException : DomainException
 public class RegistrationDisabledException(UserRole role)
     : DomainException($"Self-registration is currently closed for the {role} role. Contact an administrator.");
 
+/// <summary>
+/// Raised when an admin has switched off self-service profile editing for the caller's role.
+/// </summary>
+public class ProfileEditDisabledException(UserRole role)
+    : DomainException($"Profile editing is currently disabled for the {role} role. Contact an administrator.");
+
 public class EntityNotFoundException(string message) : DomainException(message);
 
 public class DuplicateEntityException(string message) : DomainException(message);
