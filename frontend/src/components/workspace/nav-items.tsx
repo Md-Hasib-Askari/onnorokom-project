@@ -16,6 +16,7 @@ import { ROUTES } from "@/lib/routes";
 const ICON_CLASS = "size-4";
 
 export const ADMIN_NAV_ITEMS: SidebarNavItem[] = [
+  { href: ROUTES.admin, label: "Overview", icon: <LayoutDashboardIcon className={ICON_CLASS} />, enabled: true },
   { href: ROUTES.adminUsers, label: "Users", icon: <UsersIcon className={ICON_CLASS} />, enabled: true },
   { href: ROUTES.adminGrades, label: "Grades", icon: <GraduationCapIcon className={ICON_CLASS} />, enabled: true },
   { href: ROUTES.adminSections, label: "Sections", icon: <LayersIcon className={ICON_CLASS} />, enabled: true },
@@ -29,6 +30,7 @@ export const ADMIN_NAV_ITEMS: SidebarNavItem[] = [
 export const TEACHER_NAV_ITEMS: SidebarNavItem[] = [
   { href: ROUTES.teacher, label: "Overview", icon: <LayoutDashboardIcon className={ICON_CLASS} />, enabled: true },
   { href: ROUTES.teacherSubjects, label: "My subjects", icon: <BookOpenIcon className={ICON_CLASS} />, enabled: true },
+  { href: ROUTES.teacherStudents, label: "Students", icon: <UsersIcon className={ICON_CLASS} />, enabled: true },
   { href: ROUTES.teacherAssignments, label: "Assignments", icon: <ClipboardListIcon className={ICON_CLASS} />, enabled: true },
   { href: ROUTES.profile, label: "Profile", icon: <UserCircleIcon className={ICON_CLASS} />, enabled: true },
 ];

@@ -10,6 +10,8 @@ public class AssignmentConfiguration : IEntityTypeConfiguration<Assignment>
     {
         builder.Property(x => x.Status).HasConversion<string>();
         builder.Property(x => x.MaxMarks).HasPrecision(10, 2);
+        builder.Property(x => x.AllowLateSubmission).HasDefaultValue(true);
+        builder.Property(x => x.SubmissionsOpen).HasDefaultValue(true);
 
         // The two list queries this feature adds are "assignments for a section" (student) and
         // "assignments I authored" (teacher); both filter on these columns alone.

@@ -28,7 +28,7 @@ export const authCookieOptions = {
 } as const;
 
 const ROLE_HOMES: Record<UserRole, string> = {
-  [UserRole.Admin]: ROUTES.adminUsers,
+  [UserRole.Admin]: ROUTES.admin,
   [UserRole.Teacher]: ROUTES.teacher,
   [UserRole.Student]: ROUTES.student,
 };
