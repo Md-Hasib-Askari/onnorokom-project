@@ -1,7 +1,6 @@
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.Common.Mappings;
 using AssignmentSystem.Application.Services;
-using AutoMapper;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
