@@ -7,53 +7,22 @@ public class DomainException(string message) : Exception(message);
 public class DuplicateEmailException(string email)
     : DuplicateEntityException($"A user with email '{email}' already exists.");
 
-public class InvalidCredentialsException : DomainException
-{
-    public InvalidCredentialsException()
-        : base("Invalid email or password.") { }
-}
+public class InvalidCredentialsException() : DomainException("Invalid email or password.");
 
-public class AccountPendingException : DomainException
-{
-    public AccountPendingException()
-        : base("Account is pending approval by an administrator.") { }
-}
+public class AccountPendingException() : DomainException("Account is pending approval by an administrator.");
 
-public class AccountRejectedException : DomainException
-{
-    public AccountRejectedException()
-        : base("Account has been rejected by an administrator.") { }
-}
+public class AccountRejectedException() : DomainException("Account has been rejected by an administrator.");
 
-public class AccountInactiveException : DomainException
-{
-    public AccountInactiveException()
-        : base("Account is inactive. Contact an administrator.") { }
-}
+public class AccountInactiveException() : DomainException("Account is inactive. Contact an administrator.");
 
-public class InvalidRefreshTokenException : DomainException
-{
-    public InvalidRefreshTokenException()
-        : base("Refresh token is invalid or has expired.") { }
-}
+public class InvalidRefreshTokenException() : DomainException("Refresh token is invalid or has expired.");
 
-public class InvalidCurrentPasswordException : DomainException
-{
-    public InvalidCurrentPasswordException()
-        : base("Current password is incorrect.") { }
-}
+public class InvalidCurrentPasswordException() : DomainException("Current password is incorrect.");
 
-public class InvalidOrExpiredResetCodeException : DomainException
-{
-    public InvalidOrExpiredResetCodeException()
-        : base("The code is invalid or has expired.") { }
-}
+public class InvalidOrExpiredResetCodeException() : DomainException("The code is invalid or has expired.");
 
-public class PasswordResetRateLimitedException : DomainException
-{
-    public PasswordResetRateLimitedException()
-        : base("A code was already sent recently. Please wait before requesting another.") { }
-}
+public class PasswordResetRateLimitedException()
+    : DomainException("A code was already sent recently. Please wait before requesting another.");
 
 /// <summary>
 /// Raised when an admin has switched off self-registration for the requested role. Distinct from a
