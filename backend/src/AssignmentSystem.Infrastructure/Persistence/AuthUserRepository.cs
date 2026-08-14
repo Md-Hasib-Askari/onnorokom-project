@@ -82,6 +82,23 @@ public class AuthUserRepository(AppDbContext dbContext) : IUserRepository
             u => u.Role == UserRole.Admin && u.Status == AccountStatus.Approved && u.IsActive, ct);
     }
 
+    public async Task<UserCounts> GetCountsAsync(CancellationToken ct = default)
+    {
+        var students = await dbContext.AuthUsers.CountAsync(u => u.Role == UserRole.Student, ct);
+        var teachers = await dbContext.AuthUsers.CountAsync(u => u.Role == UserRole.Teacher, ct);
+        var admins = await dbContext.AuthUsers.CountAsync(u => u.Role == UserRole.Admin, ct);
+        var pending = await dbContext.AuthUsers.CountAsync(u => u.Status == AccountStatus.Pending, ct);
+        return new UserCounts(students, teachers, admins, pending);
+    }
+
+    public async Task<List<AuthUser>> GetRecentPendingAsync(int limit, CancellationToken ct = default)
+    {
+        return await dbContext.AuthUsers
+            .Where(u => u.Status == AccountStatus.Pending)
+            .OrderByDescending(u => u.CreatedAt)
+            .Take(limit)
+            .ToListAsync(ct);
+    }
 
     public async Task AddAsync(AuthUser user, CancellationToken ct = default)
     {

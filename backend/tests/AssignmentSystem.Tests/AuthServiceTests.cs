@@ -443,6 +443,19 @@ public class AuthServiceTests
     private sealed class FakeUserRepository : IUserRepository
     {
 
+        public Task<UserCounts> GetCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(new UserCounts(
+                Users.Count(u => u.Role == UserRole.Student),
+                Users.Count(u => u.Role == UserRole.Teacher),
+                Users.Count(u => u.Role == UserRole.Admin),
+                Users.Count(u => u.Status == AccountStatus.Pending)));
+
+        public Task<List<AuthUser>> GetRecentPendingAsync(int limit, CancellationToken ct = default)
+            => Task.FromResult(Users
+                .Where(u => u.Status == AccountStatus.Pending)
+                .OrderByDescending(u => u.CreatedAt)
+                .Take(limit)
+                .ToList());
         public List<AuthUser> Users { get; } = [];
 
         public Task<AuthUser?> GetByIdAsync(Guid id, CancellationToken ct = default)

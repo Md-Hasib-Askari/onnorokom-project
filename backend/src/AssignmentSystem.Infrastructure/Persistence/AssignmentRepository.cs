@@ -61,6 +61,13 @@ public class AssignmentRepository(AppDbContext dbContext) : IAssignmentRepositor
         return await dbContext.Submissions.AnyAsync(s => s.AssignmentId == assignmentId, ct);
     }
 
+    public async Task<AssignmentCounts> GetCountsAsync(CancellationToken ct = default)
+    {
+        var drafts = await dbContext.Assignments.CountAsync(a => a.Status == AssignmentStatus.Draft, ct);
+        var published = await dbContext.Assignments.CountAsync(a => a.Status == AssignmentStatus.Published, ct);
+        return new AssignmentCounts(drafts + published, drafts, published);
+    }
+
     public async Task AddAsync(Assignment assignment, CancellationToken ct = default)
     {
         dbContext.Assignments.Add(assignment);

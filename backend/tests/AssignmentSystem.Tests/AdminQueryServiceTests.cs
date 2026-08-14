@@ -129,6 +129,16 @@ public class AdminQueryServiceTests
     private sealed class FakeAssignmentRepository(List<Assignment> assignments) : IAssignmentRepository
     {
 
+        public Task<AssignmentCounts> GetCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(CountAssignments(null));
+
+        private AssignmentCounts CountAssignments(Guid? teacherId)
+        {
+            var source = teacherId is null ? assignments : assignments.Where(a => a.TeacherId == teacherId);
+            var drafts = source.Count(a => a.Status == AssignmentStatus.Draft);
+            var published = source.Count(a => a.Status == AssignmentStatus.Published);
+            return new AssignmentCounts(drafts + published, drafts, published);
+        }
         public Task<PagedResult<Assignment>> GetPageAsync(
             int limit,
             DateTimeOffset? afterCreatedAt,
@@ -150,14 +160,6 @@ public class AdminQueryServiceTests
 
         public Task<Assignment?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(assignments.FirstOrDefault(a => a.Id == id));
-
-        public Task<List<Assignment>> GetByTeacherAsync(Guid teacherId, CancellationToken ct = default)
-            => Task.FromResult(assignments.Where(a => a.TeacherId == teacherId).ToList());
-
-        public Task<List<Assignment>> GetPublishedForSectionAsync(Guid sectionId, CancellationToken ct = default)
-            => Task.FromResult(assignments
-                .Where(a => a.SectionId == sectionId && a.Status == AssignmentStatus.Published)
-                .ToList());
 
         public Task<PagedResult<Assignment>> GetPageByTeacherAsync(
             Guid teacherId,
@@ -201,6 +203,11 @@ public class AdminQueryServiceTests
     private sealed class FakeSubmissionRepository(List<Submission> submissions) : ISubmissionRepository
     {
 
+        public Task<SubmissionCounts> GetCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(new SubmissionCounts(
+                submissions.Count,
+                submissions.Count(s => s.Status == SubmissionStatus.Graded)));
+
         public Task<PagedResult<Submission>> GetPageAsync(
             int limit,
             DateTimeOffset? afterSubmittedAt,
@@ -222,9 +229,6 @@ public class AdminQueryServiceTests
 
         public Task<Submission?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(submissions.FirstOrDefault(s => s.Id == id));
-
-        public Task<List<Submission>> GetByAssignmentAsync(Guid assignmentId, CancellationToken ct = default)
-            => Task.FromResult(submissions.Where(s => s.AssignmentId == assignmentId).ToList());
 
         public Task<PagedResult<Submission>> GetPageByAssignmentAsync(
             Guid assignmentId,

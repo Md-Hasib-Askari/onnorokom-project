@@ -1,6 +1,6 @@
 using AssignmentSystem.Application.Common.Exceptions;
-using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.Services;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
@@ -248,6 +248,20 @@ public class SectionSubjectServiceTests
 
     private sealed class FakeUserRepository : IUserRepository
     {
+
+        public Task<UserCounts> GetCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(new UserCounts(
+                Users.Count(u => u.Role == UserRole.Student),
+                Users.Count(u => u.Role == UserRole.Teacher),
+                Users.Count(u => u.Role == UserRole.Admin),
+                Users.Count(u => u.Status == AccountStatus.Pending)));
+
+        public Task<List<AuthUser>> GetRecentPendingAsync(int limit, CancellationToken ct = default)
+            => Task.FromResult(Users
+                .Where(u => u.Status == AccountStatus.Pending)
+                .OrderByDescending(u => u.CreatedAt)
+                .Take(limit)
+                .ToList());
         public List<AuthUser> Users { get; } = new();
 
         public Task<AuthUser?> GetByIdAsync(Guid id, CancellationToken ct = default)
@@ -262,12 +276,6 @@ public class SectionSubjectServiceTests
         public Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default)
             => Task.FromResult(Users.Any(u => u.Email == email));
 
-        public Task<List<AuthUser>> GetByStatusAsync(AccountStatus status, CancellationToken ct = default)
-            => Task.FromResult(Users.Where(u => u.Status == status).ToList());
-
-        public Task<List<AuthUser>> GetAllAsync(CancellationToken ct = default)
-            => Task.FromResult(Users.ToList());
-
         public Task<PagedResult<AuthUser>> GetPageAsync(
             int limit,
             DateTimeOffset? afterCreatedAt,
@@ -275,7 +283,30 @@ public class SectionSubjectServiceTests
             AccountStatus? status,
             UserRole? role,
             CancellationToken ct = default)
-            => Task.FromResult(PagedResult<AuthUser>.FromAll([]));
+        {
+            var query = Users.AsEnumerable();
+            if (status is not null)
+            {
+                query = query.Where(u => u.Status == status);
+            }
+
+            if (role is not null)
+            {
+                query = query.Where(u => u.Role == role);
+            }
+
+            var ordered = query.OrderBy(u => u.CreatedAt).ThenBy(u => u.Id).ToList();
+            if (afterCreatedAt is not null && afterId is not null)
+            {
+                ordered = ordered
+                    .Where(u => u.CreatedAt > afterCreatedAt || (u.CreatedAt == afterCreatedAt && u.Id > afterId))
+                    .ToList();
+            }
+
+            var rows = ordered.Take(limit + 1).ToList();
+            return Task.FromResult(
+                PagedResult<AuthUser>.FromRows(rows, limit, last => CursorCodec.Encode(last.CreatedAt, last.Id)));
+        }
 
         public Task<bool> HasAssignedSubjectsAsync(Guid userId, CancellationToken ct = default)
             => Task.FromResult(false);

@@ -23,7 +23,15 @@ public interface IUserRepository
     Task<bool> HasGradedSubmissionsAsync(Guid userId, CancellationToken ct = default);
     Task<int> CountUsableAdminsAsync(CancellationToken ct = default);
 
+    /// <summary>Role and status breakdown for the admin overview stats endpoint.</summary>
+    Task<UserCounts> GetCountsAsync(CancellationToken ct = default);
+
+    /// <summary>Newest pending registrations first, for the admin overview's approvals preview.</summary>
+    Task<List<AuthUser>> GetRecentPendingAsync(int limit, CancellationToken ct = default);
 
     Task AddAsync(AuthUser user, CancellationToken ct = default);
     Task UpdateAsync(AuthUser user, CancellationToken ct = default);
 }
+
+/// <summary>Role/status totals across the user base.</summary>
+public sealed record UserCounts(int Students, int Teachers, int Admins, int Pending);

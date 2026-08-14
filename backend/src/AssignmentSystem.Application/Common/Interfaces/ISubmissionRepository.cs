@@ -13,6 +13,7 @@ public interface ISubmissionRepository
         Guid? afterId,
         CancellationToken ct = default);
     Task<Submission?> GetByIdAsync(Guid id, CancellationToken ct = default);
+
     /// <summary>
     /// Keyset page of one assignment's submissions ordered by <c>(Student.FullName, Id)</c>
     /// ascending, which is the stable order a teacher grades against.
@@ -23,7 +24,6 @@ public interface ISubmissionRepository
         string? afterFullName,
         Guid? afterId,
         CancellationToken ct = default);
-
     Task<Submission?> GetByAssignmentAndStudentAsync(Guid assignmentId, Guid studentId, CancellationToken ct = default);
 
     /// <summary>
@@ -43,6 +43,13 @@ public interface ISubmissionRepository
     /// </summary>
     Task<decimal?> GetMaxAwardedMarksAsync(Guid assignmentId, CancellationToken ct = default);
 
+    /// <summary>Submission totals by status for the admin overview stats endpoint.</summary>
+    Task<SubmissionCounts> GetCountsAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Submissions without a mark across one teacher's published assignments, for the teacher
+    /// overview's awaiting-grading figure.
+    /// </summary>
     Task AddAsync(Submission submission, CancellationToken ct = default);
     Task UpdateAsync(Submission submission, CancellationToken ct = default);
 }

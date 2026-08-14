@@ -34,7 +34,16 @@ public interface IAssignmentRepository
         CancellationToken ct = default);
 
     Task<bool> HasSubmissionsAsync(Guid assignmentId, CancellationToken ct = default);
+
+    /// <summary>Assignment totals by status for the admin overview stats endpoint.</summary>
+    Task<AssignmentCounts> GetCountsAsync(CancellationToken ct = default);
+
+    /// <summary>One teacher's assignment totals by status for the teacher overview stats endpoint.</summary>
+
     Task AddAsync(Assignment assignment, CancellationToken ct = default);
     Task UpdateAsync(Assignment assignment, CancellationToken ct = default);
     Task DeleteAsync(Assignment assignment, CancellationToken ct = default);
 }
+
+/// <summary>Assignment totals by status.</summary>
+public sealed record AssignmentCounts(int Total, int Drafts, int Published);

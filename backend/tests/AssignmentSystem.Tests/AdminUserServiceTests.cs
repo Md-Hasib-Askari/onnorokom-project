@@ -650,7 +650,19 @@ public class AdminUserServiceTests
     private sealed class FakeUserRepository : IUserRepository
     {
 
+        public Task<UserCounts> GetCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(new UserCounts(
+                Users.Count(u => u.Role == UserRole.Student),
+                Users.Count(u => u.Role == UserRole.Teacher),
+                Users.Count(u => u.Role == UserRole.Admin),
+                Users.Count(u => u.Status == AccountStatus.Pending)));
 
+        public Task<List<AuthUser>> GetRecentPendingAsync(int limit, CancellationToken ct = default)
+            => Task.FromResult(Users
+                .Where(u => u.Status == AccountStatus.Pending)
+                .OrderByDescending(u => u.CreatedAt)
+                .Take(limit)
+                .ToList());
         public List<AuthUser> Users { get; } = new();
         public List<Guid> AssignedSubjectUserIds { get; } = new();
         public List<Guid> AssignmentUserIds { get; } = new();
@@ -753,7 +765,6 @@ public class AdminUserServiceTests
             CancellationToken ct = default)
             => Task.FromResult(PagedResult<StudentProfile>.FromAll(
                 StudentProfiles.Where(p => sectionIds.Contains(p.SectionId)).ToList()));
-
 
         public Task<TeacherProfile?> GetTeacherByUserIdAsync(Guid authUserId, CancellationToken ct = default)
             => Task.FromResult(TeacherProfiles.FirstOrDefault(p => p.AuthUserId == authUserId));

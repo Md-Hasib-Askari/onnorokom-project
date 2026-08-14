@@ -181,6 +181,16 @@ public class TeacherSubmissionServiceTests
     private sealed class FakeAssignmentRepository : IAssignmentRepository
     {
 
+        public Task<AssignmentCounts> GetCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(CountAssignments(null));
+
+        private AssignmentCounts CountAssignments(Guid? teacherId)
+        {
+            var source = teacherId is null ? Items : Items.Where(a => a.TeacherId == teacherId);
+            var drafts = source.Count(a => a.Status == AssignmentStatus.Draft);
+            var published = source.Count(a => a.Status == AssignmentStatus.Published);
+            return new AssignmentCounts(drafts + published, drafts, published);
+        }
         public List<Assignment> Items { get; } = new();
 
         public Task<PagedResult<Assignment>> GetPageAsync(
@@ -232,6 +242,11 @@ public class TeacherSubmissionServiceTests
 
     private sealed class FakeSubmissionRepository : ISubmissionRepository
     {
+
+        public Task<SubmissionCounts> GetCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(new SubmissionCounts(
+                Items.Count,
+                Items.Count(s => s.Status == SubmissionStatus.Graded)));
 
         public List<Submission> Items { get; } = new();
 

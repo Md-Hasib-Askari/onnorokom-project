@@ -105,6 +105,13 @@ public class SubmissionRepository(AppDbContext dbContext) : ISubmissionRepositor
             .MaxAsync(s => s.Marks, ct);
     }
 
+    public async Task<SubmissionCounts> GetCountsAsync(CancellationToken ct = default)
+    {
+        var total = await dbContext.Submissions.CountAsync(ct);
+        var graded = await dbContext.Submissions.CountAsync(s => s.Status == SubmissionStatus.Graded, ct);
+        return new SubmissionCounts(total, graded);
+    }
+
     public async Task AddAsync(Submission submission, CancellationToken ct = default)
     {
         dbContext.Submissions.Add(submission);
