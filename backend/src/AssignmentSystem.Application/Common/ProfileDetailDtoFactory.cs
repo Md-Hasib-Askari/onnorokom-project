@@ -1,6 +1,7 @@
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.DTOs.Profile;
 using AssignmentSystem.Domain.Entities;
+using AssignmentSystem.Domain.Enums;
 
 namespace AssignmentSystem.Application.Common;
 
@@ -21,7 +22,7 @@ public static class ProfileDetailDtoFactory
         TeacherProfileDetailDto? teacherProfile = null;
         AdminProfileDetailDto? adminProfile = null;
 
-        if (user.Role == Domain.Enums.UserRole.Student)
+        if (user.Role == UserRole.Student)
         {
             var profile = await profileRepository.GetStudentByUserIdAsync(user.Id, ct);
             if (profile is not null)
@@ -43,7 +44,7 @@ public static class ProfileDetailDtoFactory
                     profile.AdmissionDate);
             }
         }
-        else if (user.Role == Domain.Enums.UserRole.Teacher)
+        else if (user.Role == UserRole.Teacher)
         {
             var profile = await profileRepository.GetTeacherByUserIdAsync(user.Id, ct);
             if (profile is not null)
@@ -58,7 +59,7 @@ public static class ProfileDetailDtoFactory
                     profile.DateOfJoining);
             }
         }
-        else if (user.Role == Domain.Enums.UserRole.Admin)
+        else if (user.Role == UserRole.Admin)
         {
             var profile = await profileRepository.GetAdminByUserIdAsync(user.Id, ct);
             if (profile is not null)
