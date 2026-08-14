@@ -15,7 +15,8 @@ public class AccountService(
     ISectionRepository sectionRepository,
     ISystemSettingService systemSettingService,
     IPasswordHasher passwordHasher,
-    ITokenService tokenService) : IAccountService
+    ITokenService tokenService,
+    IUnitOfWork unitOfWork) : IAccountService
 {
     public async Task<ProfileDto> GetProfileAsync(Guid userId, CancellationToken ct = default)
     {
@@ -41,6 +42,8 @@ public class AccountService(
                 await UpdateAdminProfileAsync(user, request.AdminProfile, ct);
                 break;
         }
+
+        await unitOfWork.SaveAsync(ct);
 
         return await ToDtoAsync(user, ct);
     }
@@ -128,6 +131,7 @@ public class AccountService(
         var refreshToken = tokenService.CreateRefreshToken();
         user.SetRefreshToken(refreshToken, tokenService.RefreshTokenExpiresAt, tokenService.RefreshTokenGraceExpiresAt);
         await userRepository.UpdateAsync(user, ct);
+        await unitOfWork.SaveAsync(ct);
 
         return new AuthResponse(
             accessToken,

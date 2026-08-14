@@ -18,7 +18,7 @@ public class SectionSubjectServiceTests
 
     public SectionSubjectServiceTests()
     {
-        _sut = new SectionSubjectService(_sectionSubjects, _sections, _subjects, _users);
+        _sut = new SectionSubjectService(_sectionSubjects, _sections, _subjects, _users, new FakeUnitOfWork());
     }
 
     private (Grade Grade, Section Section, Subject Subject) SeedGradeSectionSubject()

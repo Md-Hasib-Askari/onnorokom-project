@@ -25,7 +25,7 @@ public class StudentAssignmentServiceTests
     {
         _currentUser.UserId = _studentId.ToString();
         _profiles.Students.Add(StudentProfile.Create(_studentId, _sectionId));
-        _sut = new StudentAssignmentService(_assignments, _submissions, _profiles, _currentUser);
+        _sut = new StudentAssignmentService(_assignments, _submissions, _profiles, _currentUser, new FakeUnitOfWork());
     }
 
     private Assignment SeedAssignment(

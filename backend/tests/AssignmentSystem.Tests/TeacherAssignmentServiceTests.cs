@@ -26,7 +26,7 @@ public class TeacherAssignmentServiceTests
     {
         _currentUser.UserId = _teacherId.ToString();
         _assignments = new FakeAssignmentRepository(_submissions);
-        _sut = new TeacherAssignmentService(_assignments, _submissions, _sectionSubjects, _profiles, _currentUser);
+        _sut = new TeacherAssignmentService(_assignments, _submissions, _sectionSubjects, _profiles, _currentUser, new FakeUnitOfWork());
     }
 
     private void GiveTeacherTheSectionSubject(Guid? teacherId = null)

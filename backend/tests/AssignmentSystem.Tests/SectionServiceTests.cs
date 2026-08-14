@@ -16,7 +16,7 @@ public class SectionServiceTests
 
     public SectionServiceTests()
     {
-        _sut = new SectionService(_repo, _grades, _sectionSubjects, TestMappers.CreateMapper());
+        _sut = new SectionService(_repo, _grades, _sectionSubjects, TestMappers.CreateMapper(), new FakeUnitOfWork());
     }
 
     [Fact]

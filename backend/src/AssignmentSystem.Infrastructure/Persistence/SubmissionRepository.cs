@@ -121,15 +121,15 @@ public class SubmissionRepository(AppDbContext dbContext) : ISubmissionRepositor
             .CountAsync(ct);
     }
 
-    public async Task AddAsync(Submission submission, CancellationToken ct = default)
+    public Task AddAsync(Submission submission, CancellationToken ct = default)
     {
         dbContext.Submissions.Add(submission);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(Submission submission, CancellationToken ct = default)
+    public Task UpdateAsync(Submission submission, CancellationToken ct = default)
     {
         dbContext.Submissions.Update(submission);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 }

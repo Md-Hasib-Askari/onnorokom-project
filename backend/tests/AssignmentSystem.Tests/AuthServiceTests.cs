@@ -27,9 +27,9 @@ public class AuthServiceTests
     public AuthServiceTests()
     {
         _sut = new AuthService(
-            _repo, _sections, _profiles, _resetCodes, _hasher, _tokens, new FakeTransactionService(),
+            _repo, _sections, _profiles, _resetCodes, _hasher, _tokens,
             new ProfileProvisioningService(_profiles), _settings, _emailSender,
-            Options.Create(new PasswordResetSettings()));
+            Options.Create(new PasswordResetSettings()), new FakeUnitOfWork());
     }
 
     private Section AddSection(string name = "Section A")
@@ -645,10 +645,9 @@ public class AuthServiceTests
             => $"HASH:{password}" == hashedPassword;
     }
 
-    private sealed class FakeTransactionService : ITransactionService
+    private sealed class FakeUnitOfWork : IUnitOfWork
     {
-        public Task ExecuteAsync(Func<CancellationToken, Task> work, CancellationToken ct = default)
-            => work(ct);
+        public Task SaveAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
     /// <summary>

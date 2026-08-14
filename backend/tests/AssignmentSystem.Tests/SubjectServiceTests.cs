@@ -16,7 +16,7 @@ public class SubjectServiceTests
 
     public SubjectServiceTests()
     {
-        _sut = new SubjectService(_subjects, _grades, _sectionSubjects, TestMappers.CreateMapper());
+        _sut = new SubjectService(_subjects, _grades, _sectionSubjects, TestMappers.CreateMapper(), new FakeUnitOfWork());
     }
 
     [Fact]

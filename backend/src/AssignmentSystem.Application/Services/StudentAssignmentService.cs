@@ -12,7 +12,8 @@ public class StudentAssignmentService(
     IAssignmentRepository assignmentRepository,
     ISubmissionRepository submissionRepository,
     IProfileRepository profileRepository,
-    ICurrentUser currentUser) : IStudentAssignmentService
+    ICurrentUser currentUser,
+    IUnitOfWork unitOfWork) : IStudentAssignmentService
 {
     public async Task<PagedResult<StudentAssignmentListItemDto>> GetMyAssignmentsAsync(
         PageRequest page,
@@ -109,6 +110,7 @@ public class StudentAssignmentService(
             await submissionRepository.UpdateAsync(submission, ct);
         }
 
+        await unitOfWork.SaveAsync(ct);
         return ToDetail(assignment, submission);
     }
 

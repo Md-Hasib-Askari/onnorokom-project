@@ -86,23 +86,23 @@ public class AssignmentRepository(AppDbContext dbContext) : IAssignmentRepositor
             .ToListAsync(ct);
     }
 
-    public async Task AddAsync(Assignment assignment, CancellationToken ct = default)
+    public Task AddAsync(Assignment assignment, CancellationToken ct = default)
     {
         dbContext.Assignments.Add(assignment);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(Assignment assignment, CancellationToken ct = default)
+    public Task UpdateAsync(Assignment assignment, CancellationToken ct = default)
     {
         dbContext.Assignments.Update(assignment);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
-    public async Task DeleteAsync(Assignment assignment, CancellationToken ct = default)
+    public Task DeleteAsync(Assignment assignment, CancellationToken ct = default)
     {
         assignment.Delete();
         dbContext.Assignments.Update(assignment);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
     /// <summary>

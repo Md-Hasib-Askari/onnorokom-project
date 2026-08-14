@@ -14,15 +14,15 @@ public class PasswordResetCodeRepository(AppDbContext dbContext) : IPasswordRese
             .FirstOrDefaultAsync(ct);
     }
 
-    public async Task AddAsync(PasswordResetCode code, CancellationToken ct = default)
+    public Task AddAsync(PasswordResetCode code, CancellationToken ct = default)
     {
         dbContext.PasswordResetCodes.Add(code);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(PasswordResetCode code, CancellationToken ct = default)
+    public Task UpdateAsync(PasswordResetCode code, CancellationToken ct = default)
     {
         dbContext.PasswordResetCodes.Update(code);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 }

@@ -15,10 +15,10 @@ public class AdminUserService(
     IProfileRepository profileRepository,
     ISectionRepository sectionRepository,
     IPasswordHasher passwordHasher,
-    ITransactionService transactionService,
     ICurrentUser currentUser,
     IProfileProvisioningService profileProvisioningService,
-    IEmailSender emailSender) : IAdminUserService
+    IEmailSender emailSender,
+    IUnitOfWork unitOfWork) : IAdminUserService
 {
     public async Task<PagedResult<UserListItemDto>> GetAllUsersAsync(
         PageRequest page,
@@ -76,11 +76,9 @@ public class AdminUserService(
 
         var user = AuthUser.CreatePending(request.FullName, email, passwordHasher.Hash(request.Password), request.Role);
         user.Approve();
-        await transactionService.ExecuteAsync(async transactionCt =>
-        {
-            await userRepository.AddAsync(user, transactionCt);
-            await profileProvisioningService.CreateProfileAsync(user, request.StudentSectionId, transactionCt);
-        }, ct);
+        await userRepository.AddAsync(user, ct);
+        await profileProvisioningService.CreateProfileAsync(user, request.StudentSectionId, ct);
+        await unitOfWork.SaveAsync(ct);
 
         return await BuildDtoAsync(user, ct);
     }
@@ -116,11 +114,9 @@ public class AdminUserService(
         user.UpdateDetails(request.FullName, email);
         user.ApplyStatus(request.Status, request.IsActive);
 
-        await transactionService.ExecuteAsync(async transactionCt =>
-        {
-            await userRepository.UpdateAsync(user, transactionCt);
-            await UpdateProfileAsync(user, request, transactionCt);
-        }, ct);
+        await userRepository.UpdateAsync(user, ct);
+        await UpdateProfileAsync(user, request, ct);
+        await unitOfWork.SaveAsync(ct);
         return await BuildDtoAsync(user, ct);
     }
 
@@ -145,12 +141,10 @@ public class AdminUserService(
             throw new EntityInUseException($"User '{user.FullName}' cannot be deleted because they are referenced by existing records.");
         }
 
-        await transactionService.ExecuteAsync(async transactionCt =>
-        {
-            user.Delete();
-            await userRepository.UpdateAsync(user, transactionCt);
-            await profileRepository.SoftDeleteForUserAsync(user.Id, transactionCt);
-        }, ct);
+        user.Delete();
+        await userRepository.UpdateAsync(user, ct);
+        await profileRepository.SoftDeleteForUserAsync(user.Id, ct);
+        await unitOfWork.SaveAsync(ct);
     }
 
     public async Task ResetPasswordAsync(Guid userId, CancellationToken ct = default)
@@ -161,6 +155,7 @@ public class AdminUserService(
         var newPassword = RandomPasswordGenerator.Generate();
         user.SetPassword(passwordHasher.Hash(newPassword), mustChangePassword: true);
         await userRepository.UpdateAsync(user, ct);
+        await unitOfWork.SaveAsync(ct);
 
         await emailSender.SendAsync(
             user.Email,

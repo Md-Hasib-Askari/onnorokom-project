@@ -23,7 +23,7 @@ public class TeacherSubmissionServiceTests
     public TeacherSubmissionServiceTests()
     {
         _currentUser.UserId = _teacherId.ToString();
-        _sut = new TeacherSubmissionService(_submissions, _assignments, _profiles, _currentUser);
+        _sut = new TeacherSubmissionService(_submissions, _assignments, _profiles, _currentUser, new FakeUnitOfWork());
     }
 
     private Assignment SeedAssignment(Guid? teacherId = null, decimal maxMarks = 100, DateTimeOffset? deadline = null)

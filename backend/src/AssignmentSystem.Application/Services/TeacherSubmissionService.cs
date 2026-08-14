@@ -12,7 +12,8 @@ public class TeacherSubmissionService(
     ISubmissionRepository submissionRepository,
     IAssignmentRepository assignmentRepository,
     IProfileRepository profileRepository,
-    ICurrentUser currentUser) : ITeacherSubmissionService
+    ICurrentUser currentUser,
+    IUnitOfWork unitOfWork) : ITeacherSubmissionService
 {
     public async Task<PagedResult<TeacherSubmissionDto>> GetForAssignmentAsync(
         Guid assignmentId,
@@ -52,6 +53,7 @@ public class TeacherSubmissionService(
 
         submission.Grade(request.Marks, request.Feedback, currentUser.GetRequiredUserId());
         await submissionRepository.UpdateAsync(submission, ct);
+        await unitOfWork.SaveAsync(ct);
 
         return await ToDtoAsync(submission, assignment, ct);
     }
@@ -67,6 +69,7 @@ public class TeacherSubmissionService(
 
         submission.ReturnForRevision();
         await submissionRepository.UpdateAsync(submission, ct);
+        await unitOfWork.SaveAsync(ct);
 
         return await ToDtoAsync(submission, assignment, ct);
     }

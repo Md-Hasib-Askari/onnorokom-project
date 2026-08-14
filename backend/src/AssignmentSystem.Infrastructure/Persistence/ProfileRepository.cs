@@ -76,40 +76,40 @@ public class ProfileRepository(AppDbContext dbContext) : IProfileRepository
         return await dbContext.AdminProfiles.FirstOrDefaultAsync(p => p.AuthUserId == authUserId, ct);
     }
 
-    public async Task AddAsync(TeacherProfile profile, CancellationToken ct = default)
+    public Task AddAsync(TeacherProfile profile, CancellationToken ct = default)
     {
         dbContext.TeacherProfiles.Add(profile);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
-    public async Task AddAsync(StudentProfile profile, CancellationToken ct = default)
+    public Task AddAsync(StudentProfile profile, CancellationToken ct = default)
     {
         dbContext.StudentProfiles.Add(profile);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
-    public async Task AddAsync(AdminProfile profile, CancellationToken ct = default)
+    public Task AddAsync(AdminProfile profile, CancellationToken ct = default)
     {
         dbContext.AdminProfiles.Add(profile);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(StudentProfile profile, CancellationToken ct = default)
+    public Task UpdateAsync(StudentProfile profile, CancellationToken ct = default)
     {
         dbContext.StudentProfiles.Update(profile);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(TeacherProfile profile, CancellationToken ct = default)
+    public Task UpdateAsync(TeacherProfile profile, CancellationToken ct = default)
     {
         dbContext.TeacherProfiles.Update(profile);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(AdminProfile profile, CancellationToken ct = default)
+    public Task UpdateAsync(AdminProfile profile, CancellationToken ct = default)
     {
         dbContext.AdminProfiles.Update(profile);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
     public async Task SoftDeleteForUserAsync(Guid authUserId, CancellationToken ct = default)
@@ -122,7 +122,5 @@ public class ProfileRepository(AppDbContext dbContext) : IProfileRepository
 
         var admin = await dbContext.AdminProfiles.FirstOrDefaultAsync(p => p.AuthUserId == authUserId, ct);
         admin?.Delete();
-
-        await dbContext.SaveChangesAsync(ct);
     }
 }

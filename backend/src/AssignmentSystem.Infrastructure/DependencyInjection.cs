@@ -30,7 +30,7 @@ public static class DependencyInjection
         services.AddScoped<ISubmissionRepository, SubmissionRepository>();
         services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
         services.AddScoped<IPasswordResetCodeRepository, PasswordResetCodeRepository>();
-        services.AddScoped<ITransactionService, TransactionService>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<ITokenService, TokenService>();
         if (isDevelopment)

@@ -50,30 +50,15 @@ public class SubjectRepository(AppDbContext dbContext) : ISubjectRepository
         return await dbContext.Assignments.AnyAsync(a => a.SubjectId == id, ct);
     }
 
-    public async Task AddAsync(Subject subject, CancellationToken ct = default)
+    public Task AddAsync(Subject subject, CancellationToken ct = default)
     {
         dbContext.Subjects.Add(subject);
-        await SaveAsync(subject.Name, subject.GradeId, ct);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(Subject subject, CancellationToken ct = default)
+    public Task UpdateAsync(Subject subject, CancellationToken ct = default)
     {
         dbContext.Subjects.Update(subject);
-        await SaveAsync(subject.Name, subject.GradeId, ct);
-    }
-
-    private async Task SaveAsync(string name, Guid gradeId, CancellationToken ct)
-    {
-        try
-        {
-            await dbContext.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
-        {
-            // Only reachable when a concurrent write slips past SubjectService's own uniqueness
-            // check, so word it the same way that check does rather than exposing the grade id.
-            var gradeLabel = await dbContext.GetGradeLabelAsync(gradeId, ct);
-            throw new DuplicateEntityException($"Subject '{name}' in {gradeLabel} already exists.");
-        }
+        return Task.CompletedTask;
     }
 }

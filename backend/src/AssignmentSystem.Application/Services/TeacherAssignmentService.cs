@@ -14,7 +14,8 @@ public class TeacherAssignmentService(
     ISubmissionRepository submissionRepository,
     ISectionSubjectRepository sectionSubjectRepository,
     IProfileRepository profileRepository,
-    ICurrentUser currentUser) : ITeacherAssignmentService
+    ICurrentUser currentUser,
+    IUnitOfWork unitOfWork) : ITeacherAssignmentService
 {
     public async Task<PagedResult<TeacherSectionSubjectDto>> GetMySectionSubjectsAsync(CancellationToken ct = default)
     {
@@ -117,6 +118,7 @@ public class TeacherAssignmentService(
             request.AllowLateSubmission);
 
         await assignmentRepository.AddAsync(assignment, ct);
+        await unitOfWork.SaveAsync(ct);
 
         return await GetByIdAsync(assignment.Id, ct);
     }
@@ -140,6 +142,7 @@ public class TeacherAssignmentService(
             request.AllowLateSubmission);
 
         await assignmentRepository.UpdateAsync(assignment, ct);
+        await unitOfWork.SaveAsync(ct);
 
         return await GetByIdAsync(id, ct);
     }
@@ -155,6 +158,7 @@ public class TeacherAssignmentService(
 
         assignment.Publish();
         await assignmentRepository.UpdateAsync(assignment, ct);
+        await unitOfWork.SaveAsync(ct);
 
         return await GetByIdAsync(id, ct);
     }
@@ -170,6 +174,7 @@ public class TeacherAssignmentService(
 
         assignment.Unpublish();
         await assignmentRepository.UpdateAsync(assignment, ct);
+        await unitOfWork.SaveAsync(ct);
 
         return await GetByIdAsync(id, ct);
     }
@@ -185,6 +190,7 @@ public class TeacherAssignmentService(
 
         assignment.CloseSubmissions();
         await assignmentRepository.UpdateAsync(assignment, ct);
+        await unitOfWork.SaveAsync(ct);
 
         return await GetByIdAsync(id, ct);
     }
@@ -200,6 +206,7 @@ public class TeacherAssignmentService(
 
         assignment.ReopenSubmissions();
         await assignmentRepository.UpdateAsync(assignment, ct);
+        await unitOfWork.SaveAsync(ct);
 
         return await GetByIdAsync(id, ct);
     }
@@ -215,6 +222,7 @@ public class TeacherAssignmentService(
         }
 
         await assignmentRepository.DeleteAsync(assignment, ct);
+        await unitOfWork.SaveAsync(ct);
     }
 
     private async Task<Assignment> LoadOwnedAsync(Guid id, CancellationToken ct)

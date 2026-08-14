@@ -20,7 +20,7 @@ public class AdminUserServiceTests
 
     public AdminUserServiceTests()
     {
-        _sut = new AdminUserService(_users, _profiles, _sections, _hasher, new FakeTransactionService(), _currentUser, new ProfileProvisioningService(_profiles), new FakeEmailSender());
+        _sut = new AdminUserService(_users, _profiles, _sections, _hasher, _currentUser, new ProfileProvisioningService(_profiles), new FakeEmailSender(), new FakeUnitOfWork());
     }
 
     private Section AddSection(string name = "Section A")
@@ -855,10 +855,9 @@ public class AdminUserServiceTests
             => $"HASH:{password}" == hashedPassword;
     }
 
-    private sealed class FakeTransactionService : ITransactionService
+    private sealed class FakeUnitOfWork : IUnitOfWork
     {
-        public Task ExecuteAsync(Func<CancellationToken, Task> work, CancellationToken ct = default)
-            => work(ct);
+        public Task SaveAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class FakeCurrentUser : ICurrentUser

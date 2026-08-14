@@ -11,7 +11,8 @@ public class SectionService(
     ISectionRepository sectionRepository,
     IGradeRepository gradeRepository,
     ISectionSubjectRepository sectionSubjectRepository,
-    IMapper mapper) : ISectionService
+    IMapper mapper,
+    IUnitOfWork unitOfWork) : ISectionService
 {
     public async Task<PagedResult<SectionDto>> GetAllAsync(CancellationToken ct = default)
     {
@@ -38,6 +39,7 @@ public class SectionService(
 
         var section = Section.Create(request.Name, request.GradeId);
         await sectionRepository.AddAsync(section, ct);
+        await unitOfWork.SaveAsync(ct);
         return mapper.Map<SectionDto>(section);
     }
 
@@ -60,6 +62,7 @@ public class SectionService(
 
         section.Update(request.Name, request.GradeId);
         await sectionRepository.UpdateAsync(section, ct);
+        await unitOfWork.SaveAsync(ct);
         return mapper.Map<SectionDto>(section);
     }
 
@@ -77,6 +80,7 @@ public class SectionService(
 
         section.Delete();
         await sectionRepository.UpdateAsync(section, ct);
+        await unitOfWork.SaveAsync(ct);
     }
 
     private async Task<Grade> GetGradeAsync(Guid gradeId, CancellationToken ct)

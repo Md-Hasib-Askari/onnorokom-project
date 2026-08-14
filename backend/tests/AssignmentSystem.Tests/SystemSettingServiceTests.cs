@@ -14,7 +14,7 @@ public class SystemSettingServiceTests
 
     public SystemSettingServiceTests()
     {
-        _sut = new SystemSettingService(_repo);
+        _sut = new SystemSettingService(_repo, new FakeUnitOfWork());
     }
 
     [Fact]

@@ -11,7 +11,8 @@ public class SubjectService(
     ISubjectRepository subjectRepository,
     IGradeRepository gradeRepository,
     ISectionSubjectRepository sectionSubjectRepository,
-    IMapper mapper) : ISubjectService
+    IMapper mapper,
+    IUnitOfWork unitOfWork) : ISubjectService
 {
     public async Task<PagedResult<SubjectDto>> GetAllAsync(CancellationToken ct = default)
     {
@@ -38,6 +39,7 @@ public class SubjectService(
 
         var subject = Subject.Create(request.Name, request.Code, request.GradeId);
         await subjectRepository.AddAsync(subject, ct);
+        await unitOfWork.SaveAsync(ct);
         return mapper.Map<SubjectDto>(subject);
     }
 
@@ -60,6 +62,7 @@ public class SubjectService(
 
         subject.Update(request.Name, request.Code, request.GradeId);
         await subjectRepository.UpdateAsync(subject, ct);
+        await unitOfWork.SaveAsync(ct);
         return mapper.Map<SubjectDto>(subject);
     }
 
@@ -77,6 +80,7 @@ public class SubjectService(
 
         subject.Delete();
         await subjectRepository.UpdateAsync(subject, ct);
+        await unitOfWork.SaveAsync(ct);
     }
 
     private async Task<Grade> GetGradeAsync(Guid gradeId, CancellationToken ct)

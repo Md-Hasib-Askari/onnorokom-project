@@ -7,7 +7,10 @@ using AutoMapper;
 
 namespace AssignmentSystem.Application.Services;
 
-public class GradeService(IGradeRepository gradeRepository, IMapper mapper) : IGradeService
+public class GradeService(
+    IGradeRepository gradeRepository,
+    IMapper mapper,
+    IUnitOfWork unitOfWork) : IGradeService
 {
     public async Task<PagedResult<GradeDto>> GetAllAsync(CancellationToken ct = default)
     {
@@ -33,6 +36,7 @@ public class GradeService(IGradeRepository gradeRepository, IMapper mapper) : IG
 
         var grade = Grade.Create(request.Name, request.AcademicYear, request.Description);
         await gradeRepository.AddAsync(grade, ct);
+        await unitOfWork.SaveAsync(ct);
         return mapper.Map<GradeDto>(grade);
     }
 
@@ -45,6 +49,7 @@ public class GradeService(IGradeRepository gradeRepository, IMapper mapper) : IG
 
         grade.Update(request.Name, request.AcademicYear, request.Description);
         await gradeRepository.UpdateAsync(grade, ct);
+        await unitOfWork.SaveAsync(ct);
         return mapper.Map<GradeDto>(grade);
     }
 
@@ -70,6 +75,7 @@ public class GradeService(IGradeRepository gradeRepository, IMapper mapper) : IG
 
         grade.Delete();
         await gradeRepository.UpdateAsync(grade, ct);
+        await unitOfWork.SaveAsync(ct);
     }
 
     private async Task EnsureUniqueAsync(string name, string academicYear, Grade? exclude, CancellationToken ct)

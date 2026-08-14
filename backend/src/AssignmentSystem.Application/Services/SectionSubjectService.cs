@@ -11,7 +11,8 @@ public class SectionSubjectService(
     ISectionSubjectRepository sectionSubjectRepository,
     ISectionRepository sectionRepository,
     ISubjectRepository subjectRepository,
-    IUserRepository userRepository) : ISectionSubjectService
+    IUserRepository userRepository,
+    IUnitOfWork unitOfWork) : ISectionSubjectService
 {
     public async Task<PagedResult<SectionSubjectDto>> GetSectionSubjectsAsync(Guid sectionId, CancellationToken ct = default)
     {
@@ -57,6 +58,8 @@ public class SectionSubjectService(
             await sectionSubjectRepository.UpdateAsync(sectionSubject, ct);
         }
 
+        await unitOfWork.SaveAsync(ct);
+
         var teacher = await userRepository.GetByIdAsync(teacherId, ct);
         return new SectionSubjectDto(subject.Id, subject.Name, subject.Code, teacherId, teacher?.FullName);
     }
@@ -70,6 +73,7 @@ public class SectionSubjectService(
         {
             sectionSubject.UnassignTeacher();
             await sectionSubjectRepository.UpdateAsync(sectionSubject, ct);
+            await unitOfWork.SaveAsync(ct);
         }
 
         return new SectionSubjectDto(subject.Id, subject.Name, subject.Code, null, null);

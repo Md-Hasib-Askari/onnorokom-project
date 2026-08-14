@@ -80,30 +80,15 @@ public class SectionRepository(AppDbContext dbContext) : ISectionRepository
         return await dbContext.StudentProfiles.AnyAsync(s => s.SectionId == id, ct);
     }
 
-    public async Task AddAsync(Section section, CancellationToken ct = default)
+    public Task AddAsync(Section section, CancellationToken ct = default)
     {
         dbContext.Sections.Add(section);
-        await SaveAsync(section.Name, section.GradeId, ct);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(Section section, CancellationToken ct = default)
+    public Task UpdateAsync(Section section, CancellationToken ct = default)
     {
         dbContext.Sections.Update(section);
-        await SaveAsync(section.Name, section.GradeId, ct);
-    }
-
-    private async Task SaveAsync(string name, Guid gradeId, CancellationToken ct)
-    {
-        try
-        {
-            await dbContext.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
-        {
-            // Only reachable when a concurrent write slips past SectionService's own uniqueness
-            // check, so word it the same way that check does rather than exposing the grade id.
-            var gradeLabel = await dbContext.GetGradeLabelAsync(gradeId, ct);
-            throw new DuplicateEntityException($"Section '{name}' in {gradeLabel} already exists.");
-        }
+        return Task.CompletedTask;
     }
 }

@@ -24,7 +24,7 @@ public class SystemSettingRepository(AppDbContext dbContext) : ISystemSettingRep
     /// tracked, so their edits flow out on save; a detached entity is one the service materialised
     /// for a key that has no row yet and therefore needs inserting rather than updating.
     /// </summary>
-    public async Task UpsertAsync(IReadOnlyCollection<SystemSetting> settings, CancellationToken ct = default)
+    public Task UpsertAsync(IReadOnlyCollection<SystemSetting> settings, CancellationToken ct = default)
     {
         foreach (var setting in settings)
         {
@@ -34,6 +34,6 @@ public class SystemSettingRepository(AppDbContext dbContext) : ISystemSettingRep
             }
         }
 
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 }

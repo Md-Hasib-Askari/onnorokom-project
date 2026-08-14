@@ -6,7 +6,9 @@ using AssignmentSystem.Domain.Enums;
 
 namespace AssignmentSystem.Application.Services;
 
-public class SystemSettingService(ISystemSettingRepository systemSettingRepository) : ISystemSettingService
+public class SystemSettingService(
+    ISystemSettingRepository systemSettingRepository,
+    IUnitOfWork unitOfWork) : ISystemSettingService
 {
     /// <summary>
     /// Applied when a key has no row at all. Deliberately restrictive: a database that missed the
@@ -47,6 +49,7 @@ public class SystemSettingService(ISystemSettingRepository systemSettingReposito
         };
 
         await systemSettingRepository.UpsertAsync(updated, ct);
+        await unitOfWork.SaveAsync(ct);
 
         return new SystemSettingsDto(
             request.TeacherSelfRegistrationEnabled,

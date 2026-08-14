@@ -13,7 +13,7 @@ public class GradeServiceTests
 
     public GradeServiceTests()
     {
-        _sut = new GradeService(_repo, TestMappers.CreateMapper());
+        _sut = new GradeService(_repo, TestMappers.CreateMapper(), new FakeUnitOfWork());
     }
 
     [Fact]

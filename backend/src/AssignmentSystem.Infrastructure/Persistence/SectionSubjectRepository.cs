@@ -44,16 +44,16 @@ public class SectionSubjectRepository(AppDbContext dbContext) : ISectionSubjectR
             ct);
     }
 
-    public async Task AddAsync(SectionSubject sectionSubject, CancellationToken ct = default)
+    public Task AddAsync(SectionSubject sectionSubject, CancellationToken ct = default)
     {
         dbContext.SectionSubjects.Add(sectionSubject);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(SectionSubject sectionSubject, CancellationToken ct = default)
+    public Task UpdateAsync(SectionSubject sectionSubject, CancellationToken ct = default)
     {
         dbContext.SectionSubjects.Update(sectionSubject);
-        await dbContext.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
     public Task SoftDeleteForSectionAsync(Guid sectionId, CancellationToken ct = default)
@@ -76,7 +76,5 @@ public class SectionSubjectRepository(AppDbContext dbContext) : ISectionSubjectR
         {
             link.Delete();
         }
-
-        await dbContext.SaveChangesAsync(ct);
     }
 }

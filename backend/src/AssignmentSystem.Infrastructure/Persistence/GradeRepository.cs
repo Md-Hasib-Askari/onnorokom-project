@@ -74,27 +74,15 @@ public class GradeRepository(AppDbContext dbContext) : IGradeRepository
         return await dbContext.StudentProfiles.AnyAsync(s => s.Section!.GradeId == id, ct);
     }
 
-    public async Task AddAsync(Grade grade, CancellationToken ct = default)
+    public Task AddAsync(Grade grade, CancellationToken ct = default)
     {
         dbContext.Grades.Add(grade);
-        await SaveAsync(grade.Name, grade.AcademicYear, ct);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(Grade grade, CancellationToken ct = default)
+    public Task UpdateAsync(Grade grade, CancellationToken ct = default)
     {
         dbContext.Grades.Update(grade);
-        await SaveAsync(grade.Name, grade.AcademicYear, ct);
-    }
-
-    private async Task SaveAsync(string name, string academicYear, CancellationToken ct)
-    {
-        try
-        {
-            await dbContext.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
-        {
-            throw new DuplicateEntityException($"Grade '{name}' for academic year {academicYear} already exists.");
-        }
+        return Task.CompletedTask;
     }
 }

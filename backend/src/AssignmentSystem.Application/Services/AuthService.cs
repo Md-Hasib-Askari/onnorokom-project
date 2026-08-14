@@ -16,11 +16,11 @@ public class AuthService(
     IPasswordResetCodeRepository passwordResetCodeRepository,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
-    ITransactionService transactionService,
     IProfileProvisioningService profileProvisioningService,
     ISystemSettingService systemSettingService,
     IEmailSender emailSender,
-    IOptions<PasswordResetSettings> passwordResetSettings) : IAuthService
+    IOptions<PasswordResetSettings> passwordResetSettings,
+    IUnitOfWork unitOfWork) : IAuthService
 {
     private readonly TimeSpan _resetCodeLifetime = TimeSpan.FromMinutes(passwordResetSettings.Value.CodeLifetimeMinutes);
     private readonly TimeSpan _resetCodeCooldown = TimeSpan.FromSeconds(passwordResetSettings.Value.CodeCooldownSeconds);
@@ -44,12 +44,10 @@ public class AuthService(
             passwordHasher.Hash(request.Password),
             request.Role);
 
-        await transactionService.ExecuteAsync(async transactionCt =>
-        {
-            await userRepository.AddAsync(user, transactionCt);
-            // Self-registration never carries a section; the approving admin assigns it.
-            await profileProvisioningService.CreateProfileAsync(user, studentSectionId: null, transactionCt);
-        }, ct);
+        await userRepository.AddAsync(user, ct);
+        // Self-registration never carries a section; the approving admin assigns it.
+        await profileProvisioningService.CreateProfileAsync(user, studentSectionId: null, ct);
+        await unitOfWork.SaveAsync(ct);
         return user;
     }
 
@@ -103,6 +101,7 @@ public class AuthService(
 
         user.RevokeRefreshToken();
         await userRepository.UpdateAsync(user, ct);
+        await unitOfWork.SaveAsync(ct);
     }
 
     public async Task<AuthUser> ApproveAsync(
@@ -137,16 +136,14 @@ public class AuthService(
             user.Reject();
         }
 
-        await transactionService.ExecuteAsync(async transactionCt =>
+        await userRepository.UpdateAsync(user, ct);
+
+        if (sectionToEnrol is not null)
         {
-            await userRepository.UpdateAsync(user, transactionCt);
+            await profileRepository.AddAsync(StudentProfile.Create(user.Id, sectionToEnrol.Value), ct);
+        }
 
-            if (sectionToEnrol is not null)
-            {
-                await profileRepository.AddAsync(StudentProfile.Create(user.Id, sectionToEnrol.Value), transactionCt);
-            }
-        }, ct);
-
+        await unitOfWork.SaveAsync(ct);
         return user;
     }
 
@@ -202,6 +199,7 @@ public class AuthService(
         var code = RandomNumberGenerator.GetInt32(100_000, 1_000_000).ToString();
         var resetCode = PasswordResetCode.Create(user.Id, passwordHasher.Hash(code), DateTimeOffset.UtcNow.Add(_resetCodeLifetime));
         await passwordResetCodeRepository.AddAsync(resetCode, ct);
+        await unitOfWork.SaveAsync(ct);
 
         await emailSender.SendAsync(
             user.Email,
@@ -230,11 +228,9 @@ public class AuthService(
         resetCode.Consume();
         user.SetPassword(passwordHasher.Hash(request.NewPassword));
 
-        await transactionService.ExecuteAsync(async transactionCt =>
-        {
-            await passwordResetCodeRepository.UpdateAsync(resetCode, transactionCt);
-            await userRepository.UpdateAsync(user, transactionCt);
-        }, ct);
+        await passwordResetCodeRepository.UpdateAsync(resetCode, ct);
+        await userRepository.UpdateAsync(user, ct);
+        await unitOfWork.SaveAsync(ct);
     }
 
     private void EnsureUsable(AuthUser user)
@@ -259,6 +255,7 @@ public class AuthService(
         var refreshToken = tokenService.CreateRefreshToken();
         user.SetRefreshToken(refreshToken, tokenService.RefreshTokenExpiresAt, tokenService.RefreshTokenGraceExpiresAt);
         await userRepository.UpdateAsync(user, ct);
+        await unitOfWork.SaveAsync(ct);
 
         return BuildResponse(user, accessToken, refreshToken);
     }

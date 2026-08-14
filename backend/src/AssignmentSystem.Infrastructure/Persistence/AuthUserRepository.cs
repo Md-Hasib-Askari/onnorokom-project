@@ -100,27 +100,15 @@ public class AuthUserRepository(AppDbContext dbContext) : IUserRepository
             .ToListAsync(ct);
     }
 
-    public async Task AddAsync(AuthUser user, CancellationToken ct = default)
+    public Task AddAsync(AuthUser user, CancellationToken ct = default)
     {
         dbContext.AuthUsers.Add(user);
-        await SaveAsync(user.Email, ct);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(AuthUser user, CancellationToken ct = default)
+    public Task UpdateAsync(AuthUser user, CancellationToken ct = default)
     {
         dbContext.AuthUsers.Update(user);
-        await SaveAsync(user.Email, ct);
-    }
-
-    private async Task SaveAsync(string email, CancellationToken ct)
-    {
-        try
-        {
-            await dbContext.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
-        {
-            throw new DuplicateEmailException(email);
-        }
+        return Task.CompletedTask;
     }
 }
