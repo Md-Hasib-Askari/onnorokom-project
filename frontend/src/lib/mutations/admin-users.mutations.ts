@@ -15,6 +15,7 @@ import type {
 } from "@/lib/api/schemas/admin-users.schema";
 import type { UserRole } from "@/lib/api/schemas/common.schema";
 import { adminUsersKeys } from "@/lib/queries/admin-users.queries";
+import { adminStatsKeys } from "@/lib/queries/admin-stats.queries";
 
 /** Grouped under one namespace so every admin-user mutation is defined in a single place. */
 export const AdminUserMutations = {
@@ -25,6 +26,7 @@ export const AdminUserMutations = {
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: adminUsersKeys.all });
+          queryClient.invalidateQueries({ queryKey: adminStatsKeys.overview() });
         }
       },
     });
@@ -37,6 +39,7 @@ export const AdminUserMutations = {
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: adminUsersKeys.all });
+          queryClient.invalidateQueries({ queryKey: adminStatsKeys.overview() });
         }
       },
     });
@@ -57,6 +60,7 @@ export const AdminUserMutations = {
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: adminUsersKeys.all });
+          queryClient.invalidateQueries({ queryKey: adminStatsKeys.overview() });
         }
       },
     });
@@ -69,6 +73,7 @@ export const AdminUserMutations = {
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: adminUsersKeys.all });
+          queryClient.invalidateQueries({ queryKey: adminStatsKeys.overview() });
         }
       },
     });
