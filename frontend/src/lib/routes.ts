@@ -24,6 +24,7 @@ export const ROUTES = {
   adminSettings: "/admin/settings",
   teacher: "/teacher",
   teacherSubjects: "/teacher/subjects",
+  teacherStudents: "/teacher/students",
   teacherAssignments: "/teacher/assignments",
   student: "/student",
   studentAssignments: "/student/assignments",

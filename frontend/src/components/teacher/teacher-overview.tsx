@@ -3,12 +3,16 @@
 import Link from "next/link";
 
 import { AssignmentStatus } from "@/lib/api/schemas/admin-assignments.schema";
-import type { TeacherAssignment } from "@/lib/api/schemas/teacher.schema";
-import { TeacherQueries } from "@/lib/queries/teacher.queries";
+import type { TeacherRecentAssignment } from "@/lib/api/schemas/teacher-stats.schema";
+import { formatDateTime } from "@/lib/datetime";
+import { useTeacherOverview } from "@/lib/queries/teacher-stats.queries";
 import { ROUTES } from "@/lib/routes";
+import { classLabel } from "@/lib/teacher-sections";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/workspace/error-state";
 
 /** One tile per stat below. */
 const SKELETON_TILE_COUNT = 4;
@@ -21,26 +25,11 @@ interface OverviewStats {
 }
 
 /**
- * Derived on the client from the assignment list the teacher already has, so the overview
- * costs no extra request. A dedicated stats endpoint can replace this if the list ever pages.
+ * Backed by the dedicated stats endpoint, so the counts are real totals across everything the
+ * teacher has set, not a sum over the first page of the paginated list.
  */
-function summarise(assignments: TeacherAssignment[]): OverviewStats {
-  let drafts = 0;
-  let published = 0;
-  let ungraded = 0;
-  for (const assignment of assignments) {
-    if (assignment.status === AssignmentStatus.Draft) {
-      drafts += 1;
-      continue;
-    }
-    published += 1;
-    ungraded += assignment.submissionCount - assignment.gradedCount;
-  }
-  return { total: assignments.length, drafts, published, ungraded };
-}
-
 export function TeacherOverview({ fullName }: { fullName: string }) {
-  const query = TeacherQueries.useAssignments();
+  const stats = useTeacherOverview();
 
   return (
     <div className="space-y-6">
@@ -56,14 +45,63 @@ export function TeacherOverview({ fullName }: { fullName: string }) {
         </Button>
       </div>
 
-      {query.isLoading ? (
+      {stats.isLoading ? (
         <StatsSkeleton />
-      ) : query.isError ? (
-        <p className="text-sm text-destructive">Failed to load your assignments.</p>
+      ) : stats.isError ? (
+        <ErrorState description="Failed to load your overview." retry={stats.refetch} />
       ) : (
-        <StatGrid stats={summarise(query.data?.pages.flatMap((page) => page.items) ?? [])} />
+        <>
+          <Section title="Assignments" description="Everything you have set, by status.">
+            <StatGrid stats={toStats(stats.data!)} />
+          </Section>
+
+          <Section title="Students" description="Who is enrolled in the classes you teach.">
+            <StudentsCard count={stats.data!.students} />
+          </Section>
+
+          <Section
+            title="Recently set"
+            description="Your newest assignments, and how their submissions are going."
+          >
+            <RecentAssignmentsCard assignments={stats.data!.recentAssignments} />
+          </Section>
+        </>
       )}
     </div>
+  );
+}
+
+function toStats(data: {
+  assignments: number;
+  drafts: number;
+  published: number;
+  awaitingGrading: number;
+}): OverviewStats {
+  return {
+    total: data.assignments,
+    drafts: data.drafts,
+    published: data.published,
+    ungraded: data.awaitingGrading,
+  };
+}
+
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -86,6 +124,60 @@ function Stat({ label, value, hint }: { label: string; value: number; hint: stri
         <CardTitle className="text-3xl font-semibold tabular-nums">{value}</CardTitle>
         <CardDescription>{hint}</CardDescription>
       </CardHeader>
+    </Card>
+  );
+}
+
+function StudentsCard({ count }: { count: number }) {
+  return (
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle>Your students</CardTitle>
+        <CardDescription>
+          {count} student{count === 1 ? "" : "s"} across your classes.
+        </CardDescription>
+      </CardHeader>
+      <CardFooter>
+        <Button asChild variant="outline" size="sm">
+          <Link href={ROUTES.teacherStudents}>Go to students</Link>
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
+function RecentAssignmentsCard({ assignments }: { assignments: TeacherRecentAssignment[] }) {
+  return (
+    <Card size="sm">
+      <CardContent>
+        {assignments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">You have not set anything yet.</p>
+        ) : (
+          <ul className="divide-y">
+            {assignments.map((assignment) => (
+              <li
+                key={assignment.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0"
+              >
+                <div className="space-y-1">
+                  <p className="font-medium">{assignment.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {classLabel(assignment)}. Due {formatDateTime(assignment.deadline)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm tabular-nums text-muted-foreground">
+                    {assignment.gradedCount}/{assignment.submissionCount} graded
+                  </span>
+                  <Badge variant={assignment.status === AssignmentStatus.Draft ? "secondary" : "default"}>
+                    {assignment.status}
+                  </Badge>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
     </Card>
   );
 }

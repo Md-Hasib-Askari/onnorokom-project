@@ -18,6 +18,7 @@ import type {
   GradeSubmissionRequest,
 } from "@/lib/api/schemas/teacher.schema";
 import { teacherKeys } from "@/lib/queries/teacher.queries";
+import { teacherStatsKeys } from "@/lib/queries/teacher-stats.queries";
 
 /** Grouped under one namespace so every teacher mutation is defined in a single place. */
 export const TeacherMutations = {
@@ -28,6 +29,7 @@ export const TeacherMutations = {
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: teacherKeys.assignments() });
+          queryClient.invalidateQueries({ queryKey: teacherStatsKeys.overview() });
         }
       },
     });
@@ -41,6 +43,7 @@ export const TeacherMutations = {
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: teacherKeys.assignments() });
+          queryClient.invalidateQueries({ queryKey: teacherStatsKeys.overview() });
         }
       },
     });
@@ -53,6 +56,7 @@ export const TeacherMutations = {
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: teacherKeys.assignments() });
+          queryClient.invalidateQueries({ queryKey: teacherStatsKeys.overview() });
         }
       },
     });
@@ -65,6 +69,7 @@ export const TeacherMutations = {
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: teacherKeys.assignments() });
+          queryClient.invalidateQueries({ queryKey: teacherStatsKeys.overview() });
         }
       },
     });
@@ -77,6 +82,7 @@ export const TeacherMutations = {
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: teacherKeys.assignments() });
+          queryClient.invalidateQueries({ queryKey: teacherStatsKeys.overview() });
         }
       },
     });
@@ -89,6 +95,7 @@ export const TeacherMutations = {
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: teacherKeys.assignments() });
+          queryClient.invalidateQueries({ queryKey: teacherStatsKeys.overview() });
         }
       },
     });
@@ -101,6 +108,7 @@ export const TeacherMutations = {
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: teacherKeys.assignments() });
+          queryClient.invalidateQueries({ queryKey: teacherStatsKeys.overview() });
         }
       },
     });
@@ -121,6 +129,7 @@ export const TeacherMutations = {
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: teacherKeys.assignments() });
+          queryClient.invalidateQueries({ queryKey: teacherStatsKeys.overview() });
         }
       },
     });
@@ -134,6 +143,7 @@ export const TeacherMutations = {
       onSuccess: (result) => {
         if (result.success) {
           queryClient.invalidateQueries({ queryKey: teacherKeys.assignments() });
+          queryClient.invalidateQueries({ queryKey: teacherStatsKeys.overview() });
         }
       },
     });
