@@ -1,3 +1,4 @@
+using AssignmentSystem.Application.DTOs.Grades;
 using AssignmentSystem.Domain.Entities;
 
 namespace AssignmentSystem.Application.Common.Interfaces;
@@ -6,6 +7,7 @@ public interface IGradeRepository
 {
     Task<List<Grade>> GetAllAsync(CancellationToken ct = default);
     Task<Grade?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<Dictionary<Guid, GradeCounts>> GetCountsAsync(CancellationToken ct = default);
     Task<bool> ExistsAsync(string name, string academicYear, CancellationToken ct = default);
     Task<bool> HasSubjectsAsync(Guid id, CancellationToken ct = default);
     Task<bool> HasSectionsAsync(Guid id, CancellationToken ct = default);

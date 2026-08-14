@@ -1,6 +1,8 @@
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Assignments;
+using AssignmentSystem.Application.DTOs.Grades;
+using AssignmentSystem.Application.DTOs.Sections;
 using AssignmentSystem.Application.Services;
 using AssignmentSystem.Domain.Common;
 using AssignmentSystem.Domain.Entities;
@@ -129,6 +131,9 @@ public class AdminStatsServiceTests
 
         public Task<Grade?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(grades.FirstOrDefault(g => g.Id == id));
+
+        public Task<Dictionary<Guid, GradeCounts>> GetCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(new Dictionary<Guid, GradeCounts>());
 
         public Task<List<Grade>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
             => Task.FromResult(grades.Where(g => ids.Contains(g.Id)).ToList());

@@ -12,7 +12,19 @@ public class GradeService(IGradeRepository gradeRepository, IMapper mapper) : IG
     public async Task<PagedResult<GradeDto>> GetAllAsync(CancellationToken ct = default)
     {
         var grades = await gradeRepository.GetAllAsync(ct);
-        return PagedResult<GradeDto>.FromAll(mapper.Map<List<GradeDto>>(grades));
+        var counts = await gradeRepository.GetCountsAsync(ct);
+
+        var items = grades
+            .Select(grade =>
+            {
+                var dto = mapper.Map<GradeDto>(grade);
+                return counts.TryGetValue(grade.Id, out var count)
+                    ? dto with { TeacherCount = count.TeacherCount, StudentCount = count.StudentCount }
+                    : dto;
+            })
+            .ToList();
+
+        return PagedResult<GradeDto>.FromAll(items);
     }
 
     public async Task<GradeDto> CreateAsync(GradeCreateRequest request, CancellationToken ct = default)

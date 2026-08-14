@@ -146,18 +146,49 @@ public class GradeServiceTests
         Assert.Null(page.NextCursor);
     }
 
+    [Fact]
+    public async Task GetAll_FillsTeacherAndStudentCounts()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        _repo.Grades.Add(grade);
+        _repo.Counts[grade.Id] = new GradeCounts(3, 25);
+
+        var page = await _sut.GetAllAsync();
+
+        var dto = Assert.Single(page.Items);
+        Assert.Equal(3, dto.TeacherCount);
+        Assert.Equal(25, dto.StudentCount);
+    }
+
+    [Fact]
+    public async Task GetAll_MissingCounts_FallsBackToZero()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        _repo.Grades.Add(grade);
+
+        var page = await _sut.GetAllAsync();
+
+        var dto = Assert.Single(page.Items);
+        Assert.Equal(0, dto.TeacherCount);
+        Assert.Equal(0, dto.StudentCount);
+    }
+
     private sealed class FakeGradeRepository : IGradeRepository
     {
         public List<Grade> Grades { get; } = new();
         public List<Guid> SubjectGradeIds { get; } = new();
         public List<Guid> SectionGradeIds { get; } = new();
         public List<Guid> StudentGradeIds { get; } = new();
+        public Dictionary<Guid, GradeCounts> Counts { get; } = new();
 
         public Task<List<Grade>> GetAllAsync(CancellationToken ct = default)
             => Task.FromResult(Grades.ToList());
 
         public Task<Grade?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Grades.FirstOrDefault(g => g.Id == id));
+
+        public Task<Dictionary<Guid, GradeCounts>> GetCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(Counts.ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
 
         public Task<List<Grade>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
             => Task.FromResult(Grades.Where(g => ids.Contains(g.Id)).ToList());

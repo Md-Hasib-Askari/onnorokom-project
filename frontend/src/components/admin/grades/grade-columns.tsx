@@ -32,6 +32,14 @@ export function buildGradeColumns(options: {
       cell: ({ row }) => row.original.description ?? EMPTY_CELL,
     },
     {
+      accessorKey: "teacherCount",
+      header: "Teachers",
+    },
+    {
+      accessorKey: "studentCount",
+      header: "Students",
+    },
+    {
       id: "actions",
       header: "",
       cell: ({ row }) => {

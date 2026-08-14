@@ -1,5 +1,6 @@
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.DTOs.Grades;
 using AssignmentSystem.Application.DTOs.Subjects;
 using AssignmentSystem.Application.Services;
 using AssignmentSystem.Domain.Entities;
@@ -293,6 +294,9 @@ public class SubjectServiceTests
 
         public Task<Grade?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Grades.FirstOrDefault(g => g.Id == id));
+
+        public Task<Dictionary<Guid, GradeCounts>> GetCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(new Dictionary<Guid, GradeCounts>());
 
         public Task<List<Grade>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
             => Task.FromResult(Grades.Where(g => ids.Contains(g.Id)).ToList());
