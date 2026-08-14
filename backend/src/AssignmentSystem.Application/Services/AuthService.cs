@@ -38,7 +38,11 @@ public class AuthService(
             throw new DuplicateEmailException(email);
         }
 
-        var user = AuthUser.CreatePending(request.FullName, email, passwordHasher.Hash(request.Password), request.Role);
+        var user = AuthUser.CreatePending(
+            request.FullName,
+            email,
+            passwordHasher.Hash(request.Password),
+            request.Role);
 
         await transactionService.ExecuteAsync(async transactionCt =>
         {

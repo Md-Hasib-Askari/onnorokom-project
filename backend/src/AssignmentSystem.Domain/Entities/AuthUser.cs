@@ -121,7 +121,8 @@ public class AuthUser : BaseEntity
         && PreviousRefreshTokenGraceExpiresAt is { } graceExpiresAt
         && graceExpiresAt > DateTimeOffset.UtcNow;
 
-    public static AuthUser CreatePending(string fullName, string email, string passwordHash, UserRole role)
+    public static AuthUser CreatePending(
+        string fullName, string email, string passwordHash, UserRole role)
     {
         return new AuthUser
         {
