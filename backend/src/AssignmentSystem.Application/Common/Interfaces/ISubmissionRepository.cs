@@ -50,6 +50,8 @@ public interface ISubmissionRepository
     /// Submissions without a mark across one teacher's published assignments, for the teacher
     /// overview's awaiting-grading figure.
     /// </summary>
+    Task<int> CountUngradedForTeacherAsync(Guid teacherId, CancellationToken ct = default);
+
     Task AddAsync(Submission submission, CancellationToken ct = default);
     Task UpdateAsync(Submission submission, CancellationToken ct = default);
 }

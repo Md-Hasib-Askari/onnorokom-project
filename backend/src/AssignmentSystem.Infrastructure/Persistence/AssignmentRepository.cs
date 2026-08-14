@@ -68,6 +68,24 @@ public class AssignmentRepository(AppDbContext dbContext) : IAssignmentRepositor
         return new AssignmentCounts(drafts + published, drafts, published);
     }
 
+    public async Task<AssignmentCounts> GetCountsByTeacherAsync(Guid teacherId, CancellationToken ct = default)
+    {
+        var drafts = await dbContext.Assignments.CountAsync(
+            a => a.TeacherId == teacherId && a.Status == AssignmentStatus.Draft, ct);
+        var published = await dbContext.Assignments.CountAsync(
+            a => a.TeacherId == teacherId && a.Status == AssignmentStatus.Published, ct);
+        return new AssignmentCounts(drafts + published, drafts, published);
+    }
+
+    public async Task<List<Assignment>> GetRecentByTeacherAsync(Guid teacherId, int limit, CancellationToken ct = default)
+    {
+        return await WithDetails()
+            .Where(a => a.TeacherId == teacherId)
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(limit)
+            .ToListAsync(ct);
+    }
+
     public async Task AddAsync(Assignment assignment, CancellationToken ct = default)
     {
         dbContext.Assignments.Add(assignment);

@@ -132,6 +132,16 @@ public class AdminQueryServiceTests
         public Task<AssignmentCounts> GetCountsAsync(CancellationToken ct = default)
             => Task.FromResult(CountAssignments(null));
 
+        public Task<AssignmentCounts> GetCountsByTeacherAsync(Guid teacherId, CancellationToken ct = default)
+            => Task.FromResult(CountAssignments(teacherId));
+
+        public Task<List<Assignment>> GetRecentByTeacherAsync(Guid teacherId, int limit, CancellationToken ct = default)
+            => Task.FromResult(assignments
+                .Where(a => a.TeacherId == teacherId)
+                .OrderByDescending(a => a.CreatedAt)
+                .Take(limit)
+                .ToList());
+
         private AssignmentCounts CountAssignments(Guid? teacherId)
         {
             var source = teacherId is null ? assignments : assignments.Where(a => a.TeacherId == teacherId);
@@ -208,6 +218,8 @@ public class AdminQueryServiceTests
                 submissions.Count,
                 submissions.Count(s => s.Status == SubmissionStatus.Graded)));
 
+        public Task<int> CountUngradedForTeacherAsync(Guid teacherId, CancellationToken ct = default)
+            => Task.FromResult(submissions.Count(s => s.Status != SubmissionStatus.Graded));
         public Task<PagedResult<Submission>> GetPageAsync(
             int limit,
             DateTimeOffset? afterSubmittedAt,

@@ -112,6 +112,15 @@ public class SubmissionRepository(AppDbContext dbContext) : ISubmissionRepositor
         return new SubmissionCounts(total, graded);
     }
 
+    public async Task<int> CountUngradedForTeacherAsync(Guid teacherId, CancellationToken ct = default)
+    {
+        return await dbContext.Submissions
+            .Where(s => s.Status != SubmissionStatus.Graded
+                && s.Assignment!.TeacherId == teacherId
+                && s.Assignment.Status == AssignmentStatus.Published)
+            .CountAsync(ct);
+    }
+
     public async Task AddAsync(Submission submission, CancellationToken ct = default)
     {
         dbContext.Submissions.Add(submission);

@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<ISectionSubjectService, SectionSubjectService>();
         services.AddScoped<IAdminQueryService, AdminQueryService>();
         services.AddScoped<IAdminStatsService, AdminStatsService>();
+        services.AddScoped<ITeacherStatsService, TeacherStatsService>();
         services.AddScoped<ISystemSettingService, SystemSettingService>();
         services.AddScoped<ITeacherAssignmentService, TeacherAssignmentService>();
         services.AddScoped<ITeacherSubmissionService, TeacherSubmissionService>();

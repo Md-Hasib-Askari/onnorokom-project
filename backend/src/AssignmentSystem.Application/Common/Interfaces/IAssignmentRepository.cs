@@ -39,6 +39,10 @@ public interface IAssignmentRepository
     Task<AssignmentCounts> GetCountsAsync(CancellationToken ct = default);
 
     /// <summary>One teacher's assignment totals by status for the teacher overview stats endpoint.</summary>
+    Task<AssignmentCounts> GetCountsByTeacherAsync(Guid teacherId, CancellationToken ct = default);
+
+    /// <summary>Newest assignments first, for the teacher overview's recent-work preview.</summary>
+    Task<List<Assignment>> GetRecentByTeacherAsync(Guid teacherId, int limit, CancellationToken ct = default);
 
     Task AddAsync(Assignment assignment, CancellationToken ct = default);
     Task UpdateAsync(Assignment assignment, CancellationToken ct = default);
