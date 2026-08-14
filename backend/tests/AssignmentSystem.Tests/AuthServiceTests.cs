@@ -3,6 +3,7 @@ using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Auth;
+using AssignmentSystem.Application.DTOs.Sections;
 using AssignmentSystem.Application.DTOs.Settings;
 using AssignmentSystem.Application.Services;
 using AssignmentSystem.Domain.Entities;
@@ -610,6 +611,9 @@ public class AuthServiceTests
 
         public Task<Section?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Sections.FirstOrDefault(s => s.Id == id));
+
+        public Task<Dictionary<Guid, SectionCounts>> GetCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(new Dictionary<Guid, SectionCounts>());
 
         public Task<List<Section>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
             => Task.FromResult(Sections.Where(s => ids.Contains(s.Id)).ToList());

@@ -9,6 +9,8 @@ export const sectionSummarySchema = z.object({
   name: z.string(),
   gradeId: z.string(),
   gradeName: z.string().nullable(),
+  teacherCount: z.number(),
+  studentCount: z.number(),
 });
 export type SectionSummary = z.infer<typeof sectionSummarySchema>;
 

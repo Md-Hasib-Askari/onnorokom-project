@@ -202,16 +202,36 @@ public class SectionServiceTests
         Assert.Null(page.NextCursor);
     }
 
+    [Fact]
+    public async Task GetAll_FillsTeacherAndStudentCounts()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        _grades.Grades.Add(grade);
+        var section = Section.Create("Section A", grade.Id);
+        _repo.Sections.Add(section);
+        _repo.Counts[section.Id] = new SectionCounts(2, 18);
+
+        var page = await _sut.GetAllAsync();
+
+        var dto = Assert.Single(page.Items);
+        Assert.Equal(2, dto.TeacherCount);
+        Assert.Equal(18, dto.StudentCount);
+    }
+
     private sealed class FakeSectionRepository : ISectionRepository
     {
         public List<Section> Sections { get; } = new();
         public List<Guid> StudentSectionIds { get; } = new();
+        public Dictionary<Guid, SectionCounts> Counts { get; } = new();
 
         public Task<List<Section>> GetAllAsync(CancellationToken ct = default)
             => Task.FromResult(Sections.ToList());
 
         public Task<Section?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Sections.FirstOrDefault(s => s.Id == id));
+
+        public Task<Dictionary<Guid, SectionCounts>> GetCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(Counts.ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
 
         public Task<List<Section>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
             => Task.FromResult(Sections.Where(s => ids.Contains(s.Id)).ToList());

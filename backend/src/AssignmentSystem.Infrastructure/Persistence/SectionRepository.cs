@@ -1,5 +1,6 @@
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.DTOs.Sections;
 using AssignmentSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,40 @@ public class SectionRepository(AppDbContext dbContext) : ISectionRepository
         return await dbContext.Sections
             .Include(s => s.Grade)
             .FirstOrDefaultAsync(s => s.Id == id, ct);
+    }
+
+    /// <summary>
+    /// Teacher and student totals per section for the admin section list. Teachers are the
+    /// distinct teachers of the section's section-subject links; students are the profiles
+    /// enrolled in the section. Soft-deleted rows are excluded by the global query filter.
+    /// </summary>
+    public async Task<Dictionary<Guid, SectionCounts>> GetCountsAsync(CancellationToken ct = default)
+    {
+        var teacherCounts = await dbContext.SectionSubjects
+            .Where(ss => ss.TeacherId != null)
+            .GroupBy(ss => ss.SectionId)
+            .Select(g => new { SectionId = g.Key, Count = g.Select(ss => ss.TeacherId).Distinct().Count() })
+            .ToListAsync(ct);
+
+        var studentCounts = await dbContext.StudentProfiles
+            .GroupBy(sp => sp.SectionId)
+            .Select(g => new { SectionId = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        var counts = new Dictionary<Guid, SectionCounts>();
+        foreach (var row in teacherCounts)
+        {
+            counts[row.SectionId] = new SectionCounts(row.Count, 0);
+        }
+
+        foreach (var row in studentCounts)
+        {
+            counts[row.SectionId] = counts.TryGetValue(row.SectionId, out var existing)
+                ? existing with { StudentCount = row.Count }
+                : new SectionCounts(0, row.Count);
+        }
+
+        return counts;
     }
 
     public async Task<List<Section>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)

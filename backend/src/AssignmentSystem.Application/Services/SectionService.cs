@@ -16,7 +16,19 @@ public class SectionService(
     public async Task<PagedResult<SectionDto>> GetAllAsync(CancellationToken ct = default)
     {
         var sections = await sectionRepository.GetAllAsync(ct);
-        return PagedResult<SectionDto>.FromAll(mapper.Map<List<SectionDto>>(sections));
+        var counts = await sectionRepository.GetCountsAsync(ct);
+
+        var items = sections
+            .Select(section =>
+            {
+                var dto = mapper.Map<SectionDto>(section);
+                return counts.TryGetValue(section.Id, out var count)
+                    ? dto with { TeacherCount = count.TeacherCount, StudentCount = count.StudentCount }
+                    : dto;
+            })
+            .ToList();
+
+        return PagedResult<SectionDto>.FromAll(items);
     }
 
     public async Task<SectionDto> CreateAsync(SectionCreateRequest request, CancellationToken ct = default)

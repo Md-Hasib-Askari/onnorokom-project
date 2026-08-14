@@ -29,6 +29,14 @@ export function buildSectionColumns(options: {
       cell: ({ row }) => row.original.gradeName ?? EMPTY_CELL,
     },
     {
+      accessorKey: "teacherCount",
+      header: "Teachers",
+    },
+    {
+      accessorKey: "studentCount",
+      header: "Students",
+    },
+    {
       id: "actions",
       header: "",
       cell: ({ row }) => {
