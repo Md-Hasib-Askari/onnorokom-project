@@ -1,5 +1,7 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using AssignmentSystem.Api.Middleware;
 using AssignmentSystem.Api.Security;
 using AssignmentSystem.Application;
@@ -7,6 +9,7 @@ using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Infrastructure;
 using AssignmentSystem.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
@@ -64,6 +67,35 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
+var rateLimitingSettings = builder.Configuration.GetSection(RateLimitingSettings.SectionName).Get<RateLimitingSettings>()
+    ?? throw new InvalidOperationException($"'{RateLimitingSettings.SectionName}' configuration is missing.");
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        var payload = new { error = "Too many requests. Try again later." };
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync(JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        }), cancellationToken);
+    };
+
+    options.AddPolicy(RateLimitingSettings.AuthPolicyName, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ClientIpResolver.Resolve(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = rateLimitingSettings.AuthPermitLimit,
+                Window = TimeSpan.FromSeconds(rateLimitingSettings.AuthWindowSeconds),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -76,6 +108,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

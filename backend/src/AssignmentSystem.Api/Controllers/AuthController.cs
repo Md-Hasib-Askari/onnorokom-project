@@ -1,13 +1,16 @@
+using AssignmentSystem.Api.Security;
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Application.DTOs.Auth;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AssignmentSystem.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
+[EnableRateLimiting(RateLimitingSettings.AuthPolicyName)]
 public class AuthController(
     IAuthService authService,
     ISystemSettingService systemSettingService,
