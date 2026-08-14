@@ -1,6 +1,7 @@
 using AssignmentSystem.Application.Common;
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Sections;
 using AssignmentSystem.Domain.Entities;
 
@@ -12,7 +13,7 @@ public class SectionSubjectService(
     ISubjectRepository subjectRepository,
     IUserRepository userRepository) : ISectionSubjectService
 {
-    public async Task<List<SectionSubjectDto>> GetSectionSubjectsAsync(Guid sectionId, CancellationToken ct = default)
+    public async Task<PagedResult<SectionSubjectDto>> GetSectionSubjectsAsync(Guid sectionId, CancellationToken ct = default)
     {
         var section = await sectionRepository.GetByIdAsync(sectionId, ct)
             ?? throw new EntityNotFoundException($"Section with id {sectionId} was not found.");
@@ -25,7 +26,7 @@ public class SectionSubjectService(
         var assignments = await sectionSubjectRepository.GetBySectionAsync(sectionId, ct);
         var assignmentBySubjectId = assignments.ToDictionary(a => a.SubjectId);
 
-        return gradeSubjects.Select(subject =>
+        var items = gradeSubjects.Select(subject =>
         {
             var assignment = assignmentBySubjectId.GetValueOrDefault(subject.Id);
             return new SectionSubjectDto(
@@ -35,6 +36,8 @@ public class SectionSubjectService(
                 assignment?.TeacherId,
                 assignment?.Teacher?.FullName);
         }).ToList();
+
+        return PagedResult<SectionSubjectDto>.FromAll(items);
     }
 
     public async Task<SectionSubjectDto> AssignTeacherAsync(Guid sectionId, Guid subjectId, Guid teacherId, CancellationToken ct = default)

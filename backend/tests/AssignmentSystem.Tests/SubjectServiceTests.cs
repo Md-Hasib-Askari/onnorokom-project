@@ -193,6 +193,21 @@ public class SubjectServiceTests
         Assert.False(subject.IsDeleted);
     }
 
+    [Fact]
+    public async Task GetAll_ReturnsAllSubjectsAsAnUnpagedEnvelope()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        _grades.Grades.Add(grade);
+        _subjects.Subjects.Add(Subject.Create("Mathematics", "MATH-6", grade.Id));
+        _subjects.Subjects.Add(Subject.Create("Science", "SCI-6", grade.Id));
+
+        var page = await _sut.GetAllAsync();
+
+        Assert.Equal(2, page.Items.Count);
+        Assert.False(page.HasMore);
+        Assert.Null(page.NextCursor);
+    }
+
     private sealed class FakeSubjectRepository : ISubjectRepository
     {
         public List<Subject> Subjects { get; } = new();

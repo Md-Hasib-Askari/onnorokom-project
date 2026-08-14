@@ -187,16 +187,18 @@ public class SectionServiceTests
     }
 
     [Fact]
-    public async Task GetAll_ReturnsAllSections()
+    public async Task GetAll_ReturnsAllSectionsAsAnUnpagedEnvelope()
     {
         var grade = Grade.Create("Grade 6", "2026");
         _grades.Grades.Add(grade);
         _repo.Sections.Add(Section.Create("Section A", grade.Id));
         _repo.Sections.Add(Section.Create("Section B", grade.Id));
 
-        var sections = await _sut.GetAllAsync();
+        var page = await _sut.GetAllAsync();
 
-        Assert.Equal(2, sections.Count);
+        Assert.Equal(2, page.Items.Count);
+        Assert.False(page.HasMore);
+        Assert.Null(page.NextCursor);
     }
 
     private sealed class FakeSectionRepository : ISectionRepository

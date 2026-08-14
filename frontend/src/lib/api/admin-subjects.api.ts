@@ -13,7 +13,7 @@ export class AdminSubjectsApi {
     const { data } = await apiClient.get("/api/admin/subjects", {
       headers: authHeaders(accessToken),
     });
-    return adminSubjectListResponseSchema.parse(data);
+    return adminSubjectListResponseSchema.parse(data).items;
   }
 
   static async create(accessToken: string, payload: SubjectCreateRequest): Promise<SubjectSummary> {

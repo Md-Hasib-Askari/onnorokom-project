@@ -16,7 +16,7 @@ export class AdminSectionsApi {
     const { data } = await apiClient.get("/api/admin/sections", {
       headers: authHeaders(accessToken),
     });
-    return adminSectionListResponseSchema.parse(data);
+    return adminSectionListResponseSchema.parse(data).items;
   }
 
   static async create(accessToken: string, payload: SectionCreateRequest): Promise<SectionSummary> {
@@ -47,7 +47,7 @@ export class AdminSectionsApi {
     const { data } = await apiClient.get(`/api/admin/sections/${sectionId}/subjects`, {
       headers: authHeaders(accessToken),
     });
-    return sectionSubjectsResponseSchema.parse(data);
+    return sectionSubjectsResponseSchema.parse(data).items;
   }
 
   static async assignSubjectTeacher(

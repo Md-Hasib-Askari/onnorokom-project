@@ -37,10 +37,24 @@ public static class UserListItemDtoFactory
             Guid? sectionId = null;
             string? sectionName = null;
             string? gradeName = null;
+            string? rollNumber = null;
+            DateTimeOffset? dateOfBirth = null;
+            Gender? gender = null;
+            string? guardianName = null;
+            string? guardianPhone = null;
+            string? address = null;
+            DateTimeOffset? admissionDate = null;
 
             if (profileByUserId.TryGetValue(user.Id, out var studentProfile))
             {
                 sectionId = studentProfile.SectionId;
+                rollNumber = studentProfile.RollNumber;
+                dateOfBirth = studentProfile.DateOfBirth;
+                gender = studentProfile.Gender;
+                guardianName = studentProfile.GuardianName;
+                guardianPhone = studentProfile.GuardianPhone;
+                address = studentProfile.Address;
+                admissionDate = studentProfile.AdmissionDate;
                 if (sectionById.TryGetValue(studentProfile.SectionId, out var section))
                 {
                     sectionName = section.Name;
@@ -65,7 +79,14 @@ public static class UserListItemDtoFactory
                 sectionId,
                 sectionName,
                 gradeName,
-                teacherCode));
+                teacherCode,
+                rollNumber,
+                dateOfBirth,
+                gender,
+                guardianName,
+                guardianPhone,
+                address,
+                admissionDate));
         }
 
         return dtos;

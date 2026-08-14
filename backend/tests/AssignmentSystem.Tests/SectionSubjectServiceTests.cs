@@ -128,12 +128,14 @@ public class SectionSubjectServiceTests
         var teacher = AddApprovedTeacher();
         _sectionSubjects.Rows.Add(SectionSubject.Create(section.Id, assignedSubject.Id, teacher.Id));
 
-        var subjects = await _sut.GetSectionSubjectsAsync(section.Id);
+        var page = await _sut.GetSectionSubjectsAsync(section.Id);
 
-        Assert.Equal(2, subjects.Count);
-        var assignedDto = subjects.Single(r => r.SubjectId == assignedSubject.Id);
+        Assert.Equal(2, page.Items.Count);
+        Assert.False(page.HasMore);
+        Assert.Null(page.NextCursor);
+        var assignedDto = page.Items.Single(r => r.SubjectId == assignedSubject.Id);
         Assert.Equal(teacher.Id, assignedDto.TeacherId);
-        var unassignedDto = subjects.Single(r => r.SubjectId == unassignedSubject.Id);
+        var unassignedDto = page.Items.Single(r => r.SubjectId == unassignedSubject.Id);
         Assert.Null(unassignedDto.TeacherId);
     }
 

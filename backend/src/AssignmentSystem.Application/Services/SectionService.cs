@@ -1,5 +1,6 @@
 using AssignmentSystem.Application.Common.Exceptions;
 using AssignmentSystem.Application.Common.Interfaces;
+using AssignmentSystem.Application.Common.Pagination;
 using AssignmentSystem.Application.DTOs.Sections;
 using AssignmentSystem.Domain.Entities;
 using AutoMapper;
@@ -12,10 +13,10 @@ public class SectionService(
     ISectionSubjectRepository sectionSubjectRepository,
     IMapper mapper) : ISectionService
 {
-    public async Task<List<SectionDto>> GetAllAsync(CancellationToken ct = default)
+    public async Task<PagedResult<SectionDto>> GetAllAsync(CancellationToken ct = default)
     {
         var sections = await sectionRepository.GetAllAsync(ct);
-        return mapper.Map<List<SectionDto>>(sections);
+        return PagedResult<SectionDto>.FromAll(mapper.Map<List<SectionDto>>(sections));
     }
 
     public async Task<SectionDto> CreateAsync(SectionCreateRequest request, CancellationToken ct = default)

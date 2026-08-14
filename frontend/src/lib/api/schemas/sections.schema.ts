@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { VALIDATION_MESSAGES } from "@/lib/messages";
+import { cursorPageSchema } from "./common.schema";
 
 // ---- GET /api/admin/sections ----
 
@@ -11,7 +12,7 @@ export const sectionSummarySchema = z.object({
 });
 export type SectionSummary = z.infer<typeof sectionSummarySchema>;
 
-export const adminSectionListResponseSchema = z.array(sectionSummarySchema);
+export const adminSectionListResponseSchema = cursorPageSchema(sectionSummarySchema);
 
 // ---- POST /api/admin/sections ----
 
@@ -46,7 +47,7 @@ export const sectionSubjectItemSchema = z.object({
 });
 export type SectionSubjectItem = z.infer<typeof sectionSubjectItemSchema>;
 
-export const sectionSubjectsResponseSchema = z.array(sectionSubjectItemSchema);
+export const sectionSubjectsResponseSchema = cursorPageSchema(sectionSubjectItemSchema);
 
 // ---- POST /api/admin/sections/:sectionId/subjects/:subjectId/teacher ----
 
