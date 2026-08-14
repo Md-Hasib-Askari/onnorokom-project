@@ -17,7 +17,10 @@ and the application settings.
 
 - Email/password login with JWT access tokens (15 min) and rotating refresh
   tokens (7 days) with a short grace window so a request that races a rotation
-  is not logged out. Auth endpoints are rate limited per client IP.
+  is not logged out.
+- All `/api/auth/*` endpoints are rate limited per client IP (fixed window,
+  default 10 requests per 60 seconds, tunable via the `RateLimiting` config
+  section). Exceeding the limit returns `429`.
 - Self-registered users start `Pending` and cannot sign in until an admin
   approves them; admin-created users are approved immediately.
 - Password reset via emailed codes, temporary passwords for new accounts, and
@@ -271,15 +274,15 @@ and student workspace.
 
 All errors follow one contract produced by `ExceptionHandlingMiddleware`:
 
-| Status | Body | Meaning |
-| --- | --- | --- |
-| `400` | `{ "error": "Validation failed.", "errors": { "field": "message" } }` | Request failed validation |
-| `400` | `{ "error": "..." }` | Domain rule violated |
-| `401` | (no body) | Missing or invalid access token |
-| `403` | (no body) | Authenticated as the wrong role |
-| `404` | `{ "error": "<Entity> with id <id> was not found." }` | Entity does not exist |
-| `409` | `{ "error": "..." }` | Duplicate, or entity still in use |
-| `429` | `{ "error": "Too many requests. Try again later." }` | Auth endpoint rate limit exceeded |
+| Status | Meaning |
+| --- | --- |
+| `400` | Request failed validation |
+| `400` | Domain rule violated |
+| `401` | Missing or invalid access token |
+| `403` | Authenticated as the wrong role |
+| `404` | Entity does not exist |
+| `409` | Duplicate, or entity still in use |
+| `429` | Auth endpoint rate limit exceeded |
 
 ## Assumptions
 
