@@ -9,7 +9,6 @@ using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Infrastructure;
 using AssignmentSystem.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
@@ -78,10 +77,13 @@ builder.Services.AddRateLimiter(options =>
     {
         var payload = new { error = "Too many requests. Try again later." };
         context.HttpContext.Response.ContentType = "application/json";
-        await context.HttpContext.Response.WriteAsync(JsonSerializer.Serialize(payload, new JsonSerializerOptions
+
+        var jsonResponse = JsonSerializer.Serialize(payload, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        }), cancellationToken);
+        });
+
+        await context.HttpContext.Response.WriteAsync(jsonResponse, cancellationToken);
     };
 
     options.AddPolicy(RateLimitingSettings.AuthPolicyName, context =>
