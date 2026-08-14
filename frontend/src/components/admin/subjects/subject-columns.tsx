@@ -33,6 +33,10 @@ export function buildSubjectColumns(options: {
       cell: ({ row }) => row.original.gradeName ?? EMPTY_CELL,
     },
     {
+      accessorKey: "teacherCount",
+      header: "Teachers",
+    },
+    {
       id: "actions",
       header: "",
       cell: ({ row }) => {

@@ -22,6 +22,19 @@ public class SubjectRepository(AppDbContext dbContext) : ISubjectRepository
             .FirstOrDefaultAsync(s => s.Id == id, ct);
     }
 
+    /// <summary>
+    /// Distinct teachers per subject across every section-subject link, for the admin subject
+    /// list. Soft-deleted links are excluded by the global query filter.
+    /// </summary>
+    public async Task<Dictionary<Guid, int>> GetTeacherCountsAsync(CancellationToken ct = default)
+    {
+        return await dbContext.SectionSubjects
+            .Where(ss => ss.TeacherId != null)
+            .GroupBy(ss => ss.SubjectId)
+            .Select(g => new { SubjectId = g.Key, Count = g.Select(ss => ss.TeacherId).Distinct().Count() })
+            .ToDictionaryAsync(x => x.SubjectId, x => x.Count, ct);
+    }
+
     public async Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
     {
         return await dbContext.Subjects.AnyAsync(s => s.Id == id, ct);

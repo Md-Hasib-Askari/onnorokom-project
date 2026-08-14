@@ -16,7 +16,19 @@ public class SubjectService(
     public async Task<PagedResult<SubjectDto>> GetAllAsync(CancellationToken ct = default)
     {
         var subjects = await subjectRepository.GetAllAsync(ct);
-        return PagedResult<SubjectDto>.FromAll(mapper.Map<List<SubjectDto>>(subjects));
+        var teacherCounts = await subjectRepository.GetTeacherCountsAsync(ct);
+
+        var items = subjects
+            .Select(subject =>
+            {
+                var dto = mapper.Map<SubjectDto>(subject);
+                return teacherCounts.TryGetValue(subject.Id, out var count)
+                    ? dto with { TeacherCount = count }
+                    : dto;
+            })
+            .ToList();
+
+        return PagedResult<SubjectDto>.FromAll(items);
     }
 
     public async Task<SubjectDto> CreateAsync(SubjectCreateRequest request, CancellationToken ct = default)

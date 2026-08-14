@@ -14,7 +14,8 @@ public class MappingProfile : Profile
         CreateMap<Grade, GradeDto>()
             .ForCtorParam(nameof(GradeDto.TeacherCount), o => o.MapFrom(_ => 0))
             .ForCtorParam(nameof(GradeDto.StudentCount), o => o.MapFrom(_ => 0));
-        CreateMap<Subject, SubjectDto>();
+        CreateMap<Subject, SubjectDto>()
+            .ForCtorParam(nameof(SubjectDto.TeacherCount), o => o.MapFrom(_ => 0));
         CreateMap<Section, SectionDto>()
             .ForCtorParam(nameof(SectionDto.GradeName), o => o.MapFrom(s => s.Grade != null ? s.Grade.Name : null))
             .ForCtorParam(nameof(SectionDto.TeacherCount), o => o.MapFrom(_ => 0))

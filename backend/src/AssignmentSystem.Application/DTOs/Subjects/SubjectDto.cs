@@ -5,4 +5,5 @@ public record SubjectDto(
     string Name,
     string? Code,
     Guid GradeId,
-    string? GradeName);
+    string? GradeName,
+    int TeacherCount = 0);

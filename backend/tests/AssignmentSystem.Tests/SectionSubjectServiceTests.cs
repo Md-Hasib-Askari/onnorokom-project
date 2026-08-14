@@ -231,6 +231,9 @@ public class SectionSubjectServiceTests
         public Task<Subject?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Subjects.FirstOrDefault(s => s.Id == id));
 
+        public Task<Dictionary<Guid, int>> GetTeacherCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(new Dictionary<Guid, int>());
+
         public Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Subjects.Any(s => s.Id == id));
 

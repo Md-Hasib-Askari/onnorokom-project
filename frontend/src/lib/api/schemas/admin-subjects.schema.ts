@@ -10,6 +10,7 @@ export const subjectSummarySchema = z.object({
   code: z.string().nullable(),
   gradeId: z.string(),
   gradeName: z.string().nullable(),
+  teacherCount: z.number(),
 });
 export type SubjectSummary = z.infer<typeof subjectSummarySchema>;
 

@@ -209,16 +209,35 @@ public class SubjectServiceTests
         Assert.Null(page.NextCursor);
     }
 
+    [Fact]
+    public async Task GetAll_FillsTeacherCounts()
+    {
+        var grade = Grade.Create("Grade 6", "2026");
+        _grades.Grades.Add(grade);
+        var subject = Subject.Create("Mathematics", "MATH-6", grade.Id);
+        _subjects.Subjects.Add(subject);
+        _subjects.TeacherCounts[subject.Id] = 2;
+
+        var page = await _sut.GetAllAsync();
+
+        var dto = Assert.Single(page.Items);
+        Assert.Equal(2, dto.TeacherCount);
+    }
+
     private sealed class FakeSubjectRepository : ISubjectRepository
     {
         public List<Subject> Subjects { get; } = new();
         public List<Guid> AssignmentSubjectIds { get; } = new();
+        public Dictionary<Guid, int> TeacherCounts { get; } = new();
 
         public Task<List<Subject>> GetAllAsync(CancellationToken ct = default)
             => Task.FromResult(Subjects.ToList());
 
         public Task<Subject?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Subjects.FirstOrDefault(s => s.Id == id));
+
+        public Task<Dictionary<Guid, int>> GetTeacherCountsAsync(CancellationToken ct = default)
+            => Task.FromResult(TeacherCounts.ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
 
         public Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(Subjects.Any(s => s.Id == id));
