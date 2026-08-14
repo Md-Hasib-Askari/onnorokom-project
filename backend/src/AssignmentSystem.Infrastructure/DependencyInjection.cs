@@ -1,3 +1,4 @@
+using AssignmentSystem.Application.Common;
 using AssignmentSystem.Application.Common.Interfaces;
 using AssignmentSystem.Infrastructure.Email;
 using AssignmentSystem.Infrastructure.Persistence;
@@ -5,7 +6,6 @@ using AssignmentSystem.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace AssignmentSystem.Infrastructure;
 
@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.Configure<BCryptSettings>(configuration.GetSection(BCryptSettings.SectionName));
         services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
+        services.Configure<PasswordResetSettings>(configuration.GetSection(PasswordResetSettings.SectionName));
 
         return services;
     }
